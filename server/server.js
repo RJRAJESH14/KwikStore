@@ -93,6 +93,12 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`   - Shop LAN:            http://0.0.0.0:${PORT} (Connect other counters via Wi-Fi/LAN)`);
   console.log(`   - Database:            ${getDatabaseConfig().dbPath}`);
   console.log(`============================================================\n`);
+}).on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.log(`[Notice] Port ${PORT} already active. Reusing running server instance.`);
+  } else {
+    console.error('Server listen error:', err);
+  }
 });
 
 // Also bind secondary port 4849 for convenience

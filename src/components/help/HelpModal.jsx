@@ -59,10 +59,11 @@ export function HelpModal({ isOpen, onClose, initialTab = 'support' }) {
 
       if (res.ok) {
         const data = await res.json();
-        const tagName = (data.tag_name || '').replace(/^v/, '');
+        const rawTag = (data.tag_name || '');
+        const tagName = rawTag.replace(/^[^\d]*/, '');
         setLatestRelease(data);
 
-        // Simple semver comparison
+        // Semver comparison
         if (tagName && tagName !== CURRENT_VERSION && tagName > CURRENT_VERSION) {
           setUpdateStatus('AVAILABLE');
         } else {

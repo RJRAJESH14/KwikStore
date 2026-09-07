@@ -2,6 +2,15 @@ const { app, BrowserWindow, Menu, shell, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
+// Handle EADDRINUSE or background server port conflicts silently
+process.on('uncaughtException', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.log('[Notice] Port already in use. Attaching to existing running server instance.');
+  } else {
+    console.error('Electron main process uncaught exception:', err);
+  }
+});
+
 let mainWindow = null;
 let serverStarted = false;
 

@@ -1,0 +1,5 @@
+{
+  "dbPath": "D:\\KwikStoreData\\kwikstore.db",
+  "backupDir": "/Users/rj-rajesh/.gemini/antigravity/scratch/kwikstore-pro/data/backups",
+  "autoBackupOnClose": true
+}

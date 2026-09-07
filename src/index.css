@@ -1,0 +1,124 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  body {
+    @apply font-sans antialiased text-slate-800 bg-slate-100 transition-colors duration-200;
+  }
+
+  html.dark body {
+    @apply text-slate-100 bg-slate-950;
+  }
+
+  /* Crisp typography headings */
+  h1, h2, h3, h4, h5, h6 {
+    @apply tracking-tight font-bold text-slate-900;
+  }
+
+  html.dark h1, 
+  html.dark h2, 
+  html.dark h3, 
+  html.dark h4, 
+  html.dark h5, 
+  html.dark h6 {
+    @apply text-slate-100;
+  }
+
+  /* High-contrast table headers & cells in light mode */
+  th {
+    @apply font-bold text-slate-700;
+  }
+
+  html.dark th {
+    @apply text-slate-300;
+  }
+}
+
+/* Light & Dark Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+html.dark ::-webkit-scrollbar-track {
+  background: #090d16;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background: #1e293b;
+}
+
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+/* Crisp card styling for light mode */
+.light-card {
+  @apply bg-white border border-slate-200 shadow-sm rounded-xl text-slate-800;
+}
+
+.dark-card {
+  @apply bg-slate-900 border border-slate-800 shadow-lg rounded-xl text-slate-100;
+}
+
+/* Dedicated Print Styles for 80mm Thermal & A4 Tax Invoices */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  #printable-thermal-receipt, #printable-thermal-receipt * {
+    visibility: visible;
+  }
+
+  #printable-a4-invoice, #printable-a4-invoice * {
+    visibility: visible;
+  }
+
+  #printable-salary-slip, #printable-salary-slip * {
+    visibility: visible;
+  }
+
+  #printable-thermal-receipt {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  #printable-a4-invoice, #printable-salary-slip {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 20px !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+}

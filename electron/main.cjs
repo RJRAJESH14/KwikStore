@@ -1,6 +1,14 @@
-const { app, BrowserWindow, Menu, shell, dialog } = require('electron');
+const { app, BrowserWindow, Menu, shell, dialog, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
+let autoUpdater = null;
+try {
+  autoUpdater = require('electron-updater').autoUpdater;
+  autoUpdater.autoDownload = false;
+  autoUpdater.autoInstallOnAppQuit = true;
+} catch (e) {
+  console.log('electron-updater not available:', e.message);
+}
 
 // Handle EADDRINUSE or background server port conflicts silently
 process.on('uncaughtException', (err) => {
@@ -152,6 +160,63 @@ function createApplicationMenu() {
 app.whenReady().then(async () => {
   await startBackendServer();
   createWindow();
+
+  // Setup auto-updater IPC handlers
+  if (autoUpdater) {
+    ipcMain.handle('check-update', async () => {
+      try {
+        if (isDev) {
+          return { success: false, error: 'Auto-update is disabled in development mode' };
+        }
+        const result = await autoUpdater.checkForUpdates();
+        return { success: true, updateInfo: result?.updateInfo };
+      } catch (err) {
+        console.error('Update check failed:', err);
+        return { success: false, error: err.message };
+      }
+    });
+
+    ipcMain.handle('download-update', async () => {
+      try {
+        await autoUpdater.downloadUpdate();
+        return { success: true };
+      } catch (err) {
+        console.error('Update download failed:', err);
+        return { success: false, error: err.message };
+      }
+    });
+
+    ipcMain.handle('install-update', () => {
+      try {
+        autoUpdater.quitAndInstall(false, true);
+      } catch (err) {
+        console.error('Failed to quit and install update:', err);
+      }
+    });
+
+    autoUpdater.on('download-progress', (progressObj) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('update-download-progress', {
+          percent: Math.round(progressObj.percent || 0),
+          bytesPerSecond: progressObj.bytesPerSecond || 0,
+          transferred: progressObj.transferred || 0,
+          total: progressObj.total || 0
+        });
+      }
+    });
+
+    autoUpdater.on('update-downloaded', (info) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('update-downloaded', info);
+      }
+    });
+
+    autoUpdater.on('error', (err) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('update-error', err?.message || 'Update error');
+      }
+    });
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

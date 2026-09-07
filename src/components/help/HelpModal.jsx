@@ -35,6 +35,37 @@ export function HelpModal({ isOpen, onClose, initialTab = 'support' }) {
   const [checkingUpdate, setCheckingUpdate] = useState(false);
   const [updateStatus, setUpdateStatus] = useState(null); // 'LATEST', 'AVAILABLE', 'ERROR', null
   const [latestRelease, setLatestRelease] = useState(null);
+  const [downloading, setDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(0);
+  const [downloadSpeed, setDownloadSpeed] = useState('');
+  const [updateDownloaded, setUpdateDownloaded] = useState(false);
+  const [updateError, setUpdateError] = useState(null);
+
+  useEffect(() => {
+    if (window.electronAPI) {
+      const unsubProgress = window.electronAPI.onDownloadProgress?.((prog) => {
+        setDownloading(true);
+        setDownloadProgress(prog.percent || 0);
+        if (prog.bytesPerSecond) {
+          const mb = (prog.bytesPerSecond / (1024 * 1024)).toFixed(1);
+          setDownloadSpeed(`${mb} MB/s`);
+        }
+      });
+      const unsubDownloaded = window.electronAPI.onUpdateDownloaded?.(() => {
+        setDownloading(false);
+        setUpdateDownloaded(true);
+      });
+      const unsubError = window.electronAPI.onUpdateError?.((err) => {
+        setDownloading(false);
+        setUpdateError(err);
+      });
+      return () => {
+        unsubProgress?.();
+        unsubDownloaded?.();
+        unsubError?.();
+      };
+    }
+  }, []);
 
   useEffect(() => {
     if (isOpen && initialTab) {
@@ -340,8 +371,9 @@ export function HelpModal({ isOpen, onClose, initialTab = 'support' }) {
                     </div>
                   </div>
                   <p className="text-[11px] opacity-90">
-                    A new version of KwikStore Pro is available on GitHub with updated features and performance improvements.
+                    A new version of KwikStore Pro is ready. You can download and apply this update directly within the app without saving any external installer files.
                   </p>
+                  
                   {latestRelease?.body && (
                     <div className={`p-3 rounded-lg border font-mono text-[10px] max-h-32 overflow-y-auto ${
                       isDark ? 'bg-slate-950 border-slate-800 text-slate-300' : 'bg-white border-slate-200 text-slate-700'
@@ -349,18 +381,82 @@ export function HelpModal({ isOpen, onClose, initialTab = 'support' }) {
                       {latestRelease.body}
                     </div>
                   )}
-                  <div className="flex space-x-2 pt-1">
-                    <a
-                      href={latestRelease?.html_url || GITHUB_REPO_URL}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs shadow-md flex items-center space-x-1.5 transition-all"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      <span>Download Latest Release</span>
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
-                  </div>
+
+                  {/* In-App Progress Bar if Downloading */}
+                  {downloading && (
+                    <div className="space-y-1.5 pt-1">
+                      <div className="flex justify-between text-[11px] font-bold">
+                        <span>Downloading update package...</span>
+                        <span>{downloadProgress}% {downloadSpeed ? `(${downloadSpeed})` : ''}</span>
+                      </div>
+                      <div className="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden">
+                        <div 
+                          className="bg-sky-500 h-2.5 rounded-full transition-all duration-300 shadow-sm"
+                          style={{ width: `${downloadProgress}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Ready to Restart */}
+                  {updateDownloaded && (
+                    <div className="p-3 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                        <div>
+                          <div className="font-bold text-xs">Update Downloaded & Verified!</div>
+                          <div className="text-[10px] text-emerald-400/80">Restart KwikStore Pro to apply the new version seamlessly.</div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => window.electronAPI?.installUpdate?.()}
+                        className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition-all animate-pulse"
+                      >
+                        Restart & Apply Now
+                      </button>
+                    </div>
+                  )}
+
+                  {updateError && (
+                    <div className="text-[11px] text-rose-400 flex items-center space-x-1">
+                      <AlertCircle className="w-3.5 h-3.5" />
+                      <span>{updateError}</span>
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  {!updateDownloaded && (
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                      {window.electronAPI?.downloadUpdate ? (
+                        <button
+                          onClick={async () => {
+                            setDownloading(true);
+                            setUpdateError(null);
+                            const res = await window.electronAPI.downloadUpdate();
+                            if (!res?.success && res?.error) {
+                              setDownloading(false);
+                              setUpdateError(res.error);
+                            }
+                          }}
+                          disabled={downloading}
+                          className="px-4 py-2 rounded-xl bg-gradient-to-r from-sky-600 to-brand-600 hover:from-sky-500 hover:to-brand-500 text-white font-bold text-xs shadow-md shadow-sky-500/20 flex items-center space-x-1.5 transition-all disabled:opacity-50"
+                        >
+                          <Download className={`w-3.5 h-3.5 ${downloading ? 'animate-bounce' : ''}`} />
+                          <span>{downloading ? 'Downloading In Background...' : '⚡ Download & Install In-App'}</span>
+                        </button>
+                      ) : null}
+
+                      <a
+                        href={latestRelease?.html_url || GITHUB_REPO_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-300 font-bold text-xs border border-slate-700 flex items-center space-x-1.5 transition-all"
+                      >
+                        <span>View Release Notes</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  )}
                 </div>
               )}
 

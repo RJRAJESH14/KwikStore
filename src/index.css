@@ -93,7 +93,8 @@ html.dark ::-webkit-scrollbar-thumb:hover {
   #printable-salary-slip, #printable-salary-slip *,
   #printable-attendance-report, #printable-attendance-report *,
   #printable-customer-statement, #printable-customer-statement *,
-  #printable-onboarding-letter, #printable-onboarding-letter * {
+  #printable-onboarding-letter, #printable-onboarding-letter *,
+  #employee-id-badge, #employee-id-badge * {
     visibility: visible;
   }
 

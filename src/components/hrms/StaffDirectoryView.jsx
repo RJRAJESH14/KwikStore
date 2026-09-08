@@ -81,6 +81,23 @@ export function StaffDirectoryView({
   const [selectedProfileEmp, setSelectedProfileEmp] = useState(null);
   const [profileTab, setProfileTab] = useState('overview'); // 'overview' | 'job_salary' | 'bank_kyc' | 'docs' | 'access'
 
+  // Helper for KYC Badge Theme Classes
+  const getKycBadgeClasses = (docsCount) => {
+    if (docsCount >= 4) {
+      return isDark
+        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+        : 'bg-emerald-50 text-emerald-700 border-emerald-300 font-bold';
+    }
+    if (docsCount > 0) {
+      return isDark
+        ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+        : 'bg-amber-50 text-amber-700 border-amber-300 font-bold';
+    }
+    return isDark
+      ? 'bg-slate-800 text-slate-300 border-slate-700'
+      : 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200 font-semibold';
+  };
+
   // Extract unique departments from employees
   const departments = useMemo(() => {
     const set = new Set();
@@ -204,7 +221,7 @@ export function StaffDirectoryView({
               {activeShop?.name || 'Main Branch'}
             </span>
           </div>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             Manage staff profiles, salary structures, KYC verification documents, system access roles, and identity cards.
           </p>
         </div>
@@ -246,7 +263,7 @@ export function StaffDirectoryView({
             <Users className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Staff</div>
+            <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Staff</div>
             <div className="text-lg font-black text-purple-600 dark:text-purple-400">{kpis.total}</div>
           </div>
         </div>
@@ -258,7 +275,7 @@ export function StaffDirectoryView({
             <UserCheck className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Active Staff</div>
+            <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Active Staff</div>
             <div className="text-lg font-black text-emerald-600 dark:text-emerald-400">{kpis.active}</div>
           </div>
         </div>
@@ -270,7 +287,7 @@ export function StaffDirectoryView({
             <DollarSign className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Monthly Payroll</div>
+            <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Monthly Payroll</div>
             <div className="text-lg font-black text-sky-600 dark:text-sky-400">₹{kpis.totalMonthlyPayroll.toLocaleString('en-IN')}</div>
           </div>
         </div>
@@ -282,7 +299,7 @@ export function StaffDirectoryView({
             <ShieldCheck className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Portal Logins</div>
+            <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Portal Logins</div>
             <div className="text-lg font-black text-amber-600 dark:text-amber-400">{kpis.portalUsers}</div>
           </div>
         </div>
@@ -294,7 +311,7 @@ export function StaffDirectoryView({
             <FileCheck className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">KYC Verified</div>
+            <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">KYC Verified</div>
             <div className="text-lg font-black text-indigo-600 dark:text-indigo-400">{kpis.fullyKyc}</div>
           </div>
         </div>
@@ -497,7 +514,7 @@ export function StaffDirectoryView({
                         <img
                           src={emp.photo_url}
                           alt={emp.full_name}
-                          className="w-13 h-13 w-12 h-12 rounded-2xl object-cover border-2 border-purple-500/40 shadow-sm group-hover:scale-105 transition-transform"
+                          className="w-12 h-12 rounded-2xl object-cover border-2 border-purple-500/40 shadow-sm group-hover:scale-105 transition-transform"
                         />
                       ) : (
                         <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-sm border group-hover:scale-105 transition-transform ${
@@ -520,18 +537,12 @@ export function StaffDirectoryView({
                         </span>
                         {hasPf && (
                           <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30">
-                            PF
+                            PF Active
                           </span>
                         )}
                         <button
                           onClick={() => openEmployeeDocsModal(emp)}
-                          className={`text-[9px] font-bold px-1.5 py-0.5 rounded border flex items-center space-x-1 transition-all hover:scale-105 ${
-                            docsCount >= 4
-                              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
-                              : docsCount > 0
-                                ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
-                                : 'bg-slate-800/60 text-slate-400 border-slate-700'
-                          }`}
+                          className={`text-[9px] px-1.5 py-0.5 rounded border flex items-center space-x-1 transition-all hover:scale-105 ${getKycBadgeClasses(docsCount)}`}
                           title="Click to view and manage uploaded KYC documents"
                         >
                           <FileCheck className="w-2.5 h-2.5" />
@@ -545,7 +556,9 @@ export function StaffDirectoryView({
                       >
                         {emp.full_name}
                       </h3>
-                      <p className="text-xs text-slate-400">{emp.designation || 'Staff'} • {emp.department || 'General'}</p>
+                      <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-600 font-medium'}`}>
+                        {emp.designation || 'Staff'} • {emp.department || 'General'}
+                      </p>
                     </div>
                   </div>
 
@@ -561,16 +574,16 @@ export function StaffDirectoryView({
                 </div>
 
                 <div className={`text-xs space-y-1.5 pt-2 border-t font-mono ${
-                  isDark ? 'border-slate-800 text-slate-300' : 'border-slate-200 text-slate-700'
+                  isDark ? 'border-slate-800 text-slate-300' : 'border-slate-200 text-slate-800'
                 }`}>
                   <div className="flex justify-between items-center">
-                    <span className="text-slate-400 font-sans">Phone / Contact:</span>
+                    <span className={`font-sans ${isDark ? 'text-slate-400' : 'text-slate-500 font-medium'}`}>Phone / Contact:</span>
                     <div className="flex items-center space-x-1.5">
                       <span className="font-semibold">{emp.phone}</span>
                       {emp.phone && (
                         <button
                           onClick={() => handleWhatsAppClick(emp)}
-                          className="p-1 rounded bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20"
+                          className="p-1 rounded bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20"
                           title="Open WhatsApp chat"
                         >
                           <Share2 className="w-2.5 h-2.5" />
@@ -579,15 +592,15 @@ export function StaffDirectoryView({
                     </div>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-400 font-sans">Joining Date:</span>
-                    <span className="text-slate-300 font-sans">{emp.date_of_joining || 'Not set'}</span>
+                    <span className={`font-sans ${isDark ? 'text-slate-400' : 'text-slate-500 font-medium'}`}>Joining Date:</span>
+                    <span className={`font-sans ${isDark ? 'text-slate-300' : 'text-slate-800 font-medium'}`}>{emp.date_of_joining || 'Not set'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-400 font-sans">Monthly Basic:</span>
+                    <span className={`font-sans ${isDark ? 'text-slate-400' : 'text-slate-500 font-medium'}`}>Monthly Basic:</span>
                     <span className="text-emerald-600 dark:text-emerald-400 font-bold">₹{Number(emp.monthly_basic_salary || 0).toLocaleString('en-IN')}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-slate-400 font-sans">Portal Access:</span>
+                    <span className={`font-sans ${isDark ? 'text-slate-400' : 'text-slate-500 font-medium'}`}>Portal Access:</span>
                     {emp.username ? (
                       emp.login_is_active !== 0 ? (
                         <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center space-x-1">
@@ -601,7 +614,7 @@ export function StaffDirectoryView({
                         </span>
                       )
                     ) : (
-                      <span className="text-slate-400 italic font-sans text-[11px]">No Login</span>
+                      <span className={`italic font-sans text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500 font-medium'}`}>No Login</span>
                     )}
                   </div>
                 </div>
@@ -633,7 +646,7 @@ export function StaffDirectoryView({
                         title="View / Upload KYC Docs"
                       >
                         <FileUp className="w-3.5 h-3.5" />
-                        <span className="text-[10px]">Docs</span>
+                        <span className="text-[10px]">KYC Docs</span>
                       </button>
 
                       {/* Welcome / Appointment Letter */}
@@ -731,17 +744,17 @@ export function StaffDirectoryView({
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className={`border-b font-bold ${
-                  isDark ? 'bg-slate-950/80 border-slate-800 text-slate-300' : 'bg-slate-100/80 border-slate-200 text-slate-700'
+                  isDark ? 'bg-slate-950/80 border-slate-800 text-slate-300' : 'bg-slate-100/90 border-slate-200 text-slate-800'
                 }`}>
-                  <th className="py-3 px-3 text-center w-12">#</th>
-                  <th className="py-3 px-3">Employee Details</th>
-                  <th className="py-3 px-3">Designation & Dept</th>
-                  <th className="py-3 px-3">Contact Details</th>
-                  <th className="py-3 px-3 text-right">Basic Salary</th>
-                  <th className="py-3 px-3 text-center">KYC Docs</th>
-                  <th className="py-3 px-3">Portal Access</th>
-                  <th className="py-3 px-3 text-center">Status</th>
-                  <th className="py-3 px-3 text-right">Actions</th>
+                  <th className="py-3.5 px-3 text-center w-12">#</th>
+                  <th className="py-3.5 px-3">Employee Details</th>
+                  <th className="py-3.5 px-3">Designation & Dept</th>
+                  <th className="py-3.5 px-3">Contact Details</th>
+                  <th className="py-3.5 px-3 text-right">Basic Salary</th>
+                  <th className="py-3.5 px-3 text-center">KYC Docs</th>
+                  <th className="py-3.5 px-3">Portal Access</th>
+                  <th className="py-3.5 px-3 text-center">Status</th>
+                  <th className="py-3.5 px-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className={`divide-y ${isDark ? 'divide-slate-800' : 'divide-slate-100'}`}>
@@ -756,7 +769,7 @@ export function StaffDirectoryView({
                         !isActive ? 'opacity-60 bg-rose-500/5' : ''
                       }`}
                     >
-                      <td className="py-3 px-3 text-center font-mono text-slate-400">
+                      <td className={`py-3 px-3 text-center font-mono font-bold ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                         {idx + 1}
                       </td>
 
@@ -789,42 +802,37 @@ export function StaffDirectoryView({
                       </td>
 
                       <td className="py-3 px-3">
-                        <div className="font-semibold text-slate-800 dark:text-slate-200">{emp.designation || 'Staff'}</div>
-                        <div className="text-[11px] text-slate-400">{emp.department || 'General'}</div>
+                        <div className={`font-semibold ${isDark ? 'text-slate-200' : 'text-slate-900'}`}>{emp.designation || 'Staff'}</div>
+                        <div className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500 font-medium'}`}>{emp.department || 'General'}</div>
                       </td>
 
                       <td className="py-3 px-3 font-mono">
-                        <div className="flex items-center space-x-1.5 text-slate-700 dark:text-slate-300">
+                        <div className={`flex items-center space-x-1.5 ${isDark ? 'text-slate-300' : 'text-slate-800 font-medium'}`}>
                           <span>{emp.phone}</span>
                           {emp.phone && (
                             <button
                               onClick={() => handleWhatsAppClick(emp)}
-                              className="p-1 rounded bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20"
+                              className="p-1 rounded bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20"
                             >
                               <Share2 className="w-2.5 h-2.5" />
                             </button>
                           )}
                         </div>
-                        {emp.email && <div className="text-[10px] font-sans text-slate-400">{emp.email}</div>}
+                        {emp.email && <div className={`text-[10px] font-sans ${isDark ? 'text-slate-400' : 'text-slate-500 font-medium'}`}>{emp.email}</div>}
                       </td>
 
                       <td className="py-3 px-3 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
                         ₹{Number(emp.monthly_basic_salary || 0).toLocaleString('en-IN')}
                         {emp.is_pf_eligible ? (
-                          <span className="block text-[9px] font-sans text-cyan-500 font-semibold">+ PF Eligible</span>
+                          <span className="block text-[9px] font-sans text-cyan-600 dark:text-cyan-400 font-semibold">+ PF Eligible</span>
                         ) : null}
                       </td>
 
                       <td className="py-3 px-3 text-center">
                         <button
                           onClick={() => openEmployeeDocsModal(emp)}
-                          className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition-all ${
-                            docsCount >= 4
-                              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
-                              : docsCount > 0
-                                ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
-                                : 'bg-slate-800/40 text-slate-400 border-slate-700'
-                          }`}
+                          className={`px-2.5 py-1 rounded-lg text-[10px] border transition-all ${getKycBadgeClasses(docsCount)}`}
+                          title="Click to view and upload KYC documents"
                         >
                           {docsCount}/7 Verified
                         </button>
@@ -832,12 +840,12 @@ export function StaffDirectoryView({
 
                       <td className="py-3 px-3">
                         {emp.username ? (
-                          <div className="flex items-center space-x-1 text-purple-600 dark:text-purple-400 font-semibold">
+                          <div className="flex items-center space-x-1 text-purple-600 dark:text-purple-400 font-bold">
                             <ShieldCheck className="w-3.5 h-3.5" />
                             <span>@{emp.username}</span>
                           </div>
                         ) : (
-                          <span className="text-slate-400 italic text-[11px]">No Login</span>
+                          <span className={`italic text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500 font-medium'}`}>No Login</span>
                         )}
                       </td>
 
@@ -855,7 +863,7 @@ export function StaffDirectoryView({
                         <div className="flex items-center justify-end space-x-1">
                           <button
                             onClick={() => setSelectedProfileEmp(emp)}
-                            className="p-1.5 rounded-lg border border-purple-500/30 text-purple-500 hover:bg-purple-500/10"
+                            className="p-1.5 rounded-lg border border-purple-500/30 text-purple-600 dark:text-purple-400 hover:bg-purple-500/10"
                             title="View Profile Dossier"
                           >
                             <Eye className="w-3.5 h-3.5" />
@@ -864,28 +872,28 @@ export function StaffDirectoryView({
                             <>
                               <button
                                 onClick={() => openEditEmployeeModal(emp)}
-                                className="p-1.5 rounded-lg border border-sky-500/30 text-sky-500 hover:bg-sky-500/10"
+                                className="p-1.5 rounded-lg border border-sky-500/30 text-sky-600 dark:text-sky-400 hover:bg-sky-500/10"
                                 title="Edit Employee"
                               >
                                 <Edit3 className="w-3.5 h-3.5" />
                               </button>
                               <button
                                 onClick={() => setIdCardEmployee(emp)}
-                                className="p-1.5 rounded-lg border border-purple-500/30 text-purple-500 hover:bg-purple-500/10"
+                                className="p-1.5 rounded-lg border border-purple-500/30 text-purple-600 dark:text-purple-400 hover:bg-purple-500/10"
                                 title="Print ID Card"
                               >
                                 <CreditCard className="w-3.5 h-3.5" />
                               </button>
                               <button
                                 onClick={() => setSelectedOnboardingLetter(emp)}
-                                className="p-1.5 rounded-lg border border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10"
+                                className="p-1.5 rounded-lg border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10"
                                 title="Appointment Letter"
                               >
                                 <Award className="w-3.5 h-3.5" />
                               </button>
                               <button
                                 onClick={() => openAccessModal(emp)}
-                                className="p-1.5 rounded-lg border border-indigo-500/30 text-indigo-500 hover:bg-indigo-500/10"
+                                className="p-1.5 rounded-lg border border-indigo-500/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/10"
                                 title="Portal Access"
                               >
                                 <ShieldCheck className="w-3.5 h-3.5" />
@@ -893,7 +901,7 @@ export function StaffDirectoryView({
                               <button
                                 onClick={() => handleToggleEmployeeStatus(emp)}
                                 className={`p-1.5 rounded-lg border ${
-                                  isActive ? 'border-slate-700 text-slate-400 hover:text-white' : 'border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10'
+                                  isActive ? 'border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-100' : 'border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10'
                                 }`}
                                 title={isActive ? "Disable" : "Enable"}
                               >
@@ -957,24 +965,26 @@ export function StaffDirectoryView({
                         {isActive ? 'ACTIVE' : 'DISABLED'}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-400">{emp.designation || 'Staff'} • {emp.department || 'General'}</p>
+                    <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-600 font-medium'}`}>
+                      {emp.designation || 'Staff'} • {emp.department || 'General'}
+                    </p>
                   </div>
                 </div>
 
                 {/* Middle: Salary & Phone */}
                 <div className="flex items-center space-x-6 text-xs font-mono">
                   <div>
-                    <span className="text-slate-400 text-[10px] block font-sans">Monthly Salary</span>
+                    <span className={`text-[10px] block font-sans ${isDark ? 'text-slate-400' : 'text-slate-500 font-medium'}`}>Monthly Salary</span>
                     <span className="font-bold text-emerald-600 dark:text-emerald-400">₹{Number(emp.monthly_basic_salary || 0).toLocaleString('en-IN')}</span>
                   </div>
                   <div>
-                    <span className="text-slate-400 text-[10px] block font-sans">Contact</span>
+                    <span className={`text-[10px] block font-sans ${isDark ? 'text-slate-400' : 'text-slate-500 font-medium'}`}>Contact</span>
                     <div className="flex items-center space-x-1">
-                      <span>{emp.phone}</span>
+                      <span className={`font-semibold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{emp.phone}</span>
                       {emp.phone && (
                         <button
                           onClick={() => handleWhatsAppClick(emp)}
-                          className="p-1 rounded bg-emerald-500/10 text-emerald-500"
+                          className="p-1 rounded bg-emerald-500/10 text-emerald-600"
                         >
                           <Share2 className="w-2.5 h-2.5" />
                         </button>
@@ -982,8 +992,13 @@ export function StaffDirectoryView({
                     </div>
                   </div>
                   <div>
-                    <span className="text-slate-400 text-[10px] block font-sans">KYC Status</span>
-                    <span className="font-semibold text-indigo-500">{docsCount}/7 Docs</span>
+                    <span className={`text-[10px] block font-sans ${isDark ? 'text-slate-400' : 'text-slate-500 font-medium'}`}>KYC Status</span>
+                    <button
+                      onClick={() => openEmployeeDocsModal(emp)}
+                      className={`px-2 py-0.5 rounded text-[10px] border ${getKycBadgeClasses(docsCount)}`}
+                    >
+                      {docsCount}/7 Docs
+                    </button>
                   </div>
                 </div>
 
@@ -999,7 +1014,7 @@ export function StaffDirectoryView({
                   {isOwner && (
                     <button
                       onClick={() => openEditEmployeeModal(emp)}
-                      className="p-1.5 rounded-lg border border-sky-500/30 text-sky-500 hover:bg-sky-500/10"
+                      className="p-1.5 rounded-lg border border-sky-500/30 text-sky-600 dark:text-sky-400 hover:bg-sky-500/10"
                       title="Edit"
                     >
                       <Edit3 className="w-3.5 h-3.5" />
@@ -1035,7 +1050,7 @@ export function StaffDirectoryView({
                       <h3 className={`font-bold text-base ${isDark ? 'text-white' : 'text-slate-900'}`}>
                         {deptName}
                       </h3>
-                      <p className="text-xs text-slate-400">
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
                         {deptEmployees.length} Staff Member{deptEmployees.length > 1 ? 's' : ''} Allocated
                       </p>
                     </div>
@@ -1072,13 +1087,13 @@ export function StaffDirectoryView({
                           >
                             {emp.full_name}
                           </h4>
-                          <span className="text-[10px] text-slate-400">{emp.designation || 'Staff'}</span>
+                          <span className={`text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-500 font-medium'}`}>{emp.designation || 'Staff'}</span>
                         </div>
                       </div>
 
                       <button
                         onClick={() => setSelectedProfileEmp(emp)}
-                        className="p-1.5 rounded-lg border border-purple-500/30 text-purple-500 hover:bg-purple-500/10"
+                        className="p-1.5 rounded-lg border border-purple-500/30 text-purple-600 dark:text-purple-400 hover:bg-purple-500/10"
                         title="View Profile"
                       >
                         <Eye className="w-3.5 h-3.5" />
@@ -1129,7 +1144,7 @@ export function StaffDirectoryView({
                       {selectedProfileEmp.status || 'ACTIVE'}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-400 mt-0.5">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                     {selectedProfileEmp.designation || 'Staff'} • {selectedProfileEmp.department || 'General Operations'} • Joined {selectedProfileEmp.date_of_joining || 'N/A'}
                   </p>
                 </div>
@@ -1412,7 +1427,7 @@ export function StaffDirectoryView({
               {profileTab === 'docs' && (
                 <div className="space-y-3">
                   <div className="flex justify-between items-center mb-2">
-                    <p className="text-xs text-slate-400">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
                       Standard Indian Retail 7-Document Verification Checklist
                     </p>
                     <button
@@ -1439,7 +1454,7 @@ export function StaffDirectoryView({
                           <span className="text-lg">{doc.icon}</span>
                           <div>
                             <span className="font-bold block">{doc.label}</span>
-                            <span className="text-[10px] text-slate-400">{doc.desc}</span>
+                            <span className="text-[10px] text-slate-500 dark:text-slate-400">{doc.desc}</span>
                           </div>
                         </div>
 

@@ -5,6 +5,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { SalarySlipPrint } from '../print/SalarySlipPrint';
 import { OnboardingLetterPrint } from '../print/OnboardingLetterPrint';
 import { EmployeeIdCardModal } from './EmployeeIdCardModal';
+import { AttendanceAnalytics } from './AttendanceAnalytics';
 import { PORTAL_MODULES } from '../staff/StaffRbacManager';
 import { numberToIndianWords } from '../../utils/numberToWords';
 import { 
@@ -85,6 +86,7 @@ export function HrmsDashboard() {
   const [employees, setEmployees] = useState([]);
   const [attendance, setAttendance] = useState([]);
   const [selectedAttendanceDate, setSelectedAttendanceDate] = useState(new Date().toISOString().slice(0, 10));
+  const [attendanceSubTab, setAttendanceSubTab] = useState('daily'); // 'daily' | 'analytics'
   const [leaves, setLeaves] = useState([]);
   const [advances, setAdvances] = useState([]);
   const [payrollSummary, setPayrollSummary] = useState([]);
@@ -1299,43 +1301,89 @@ export function HrmsDashboard() {
         {/* Tab 2: Attendance Register & Working Days */}
         {activeTab === 'attendance' && (
           <div className="space-y-4">
-            <div className="flex flex-wrap justify-between items-center gap-3">
-              <div>
-                <h2 className={`text-sm font-bold uppercase tracking-wider ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                  Staff Attendance & Daily Working Hours Register
-                </h2>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Automatic check-in is logged on POS login. Shop owner can stamp or adjust attendance for any date.
-                </p>
-              </div>
-
-              {/* Date Filter & Batch Actions */}
+            {/* SUB-TAB VIEW SWITCHER */}
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3 border-slate-200 dark:border-slate-800">
               <div className="flex items-center space-x-2">
-                <input
-                  type="date"
-                  value={selectedAttendanceDate}
-                  onChange={(e) => setSelectedAttendanceDate(e.target.value)}
-                  className={`border rounded-xl px-3 py-1.5 text-xs outline-none font-mono ${
-                    isDark ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
+                <button
+                  onClick={() => setAttendanceSubTab('daily')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all ${
+                    attendanceSubTab === 'daily'
+                      ? 'bg-brand-600 text-white shadow-md shadow-brand-600/20'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
-                />
-
-                {isOwner && (
-                  <button
-                    onClick={() => handleMarkBatchAttendance('PRESENT')}
-                    className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md flex items-center space-x-1 transition-all"
-                  >
-                    <CheckCircle className="w-3.5 h-3.5" />
-                    <span>Mark All Present</span>
-                  </button>
-                )}
+                >
+                  <CalendarCheck className="w-3.5 h-3.5" />
+                  <span>Daily Attendance Register</span>
+                </button>
+                <button
+                  onClick={() => setAttendanceSubTab('analytics')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all ${
+                    attendanceSubTab === 'analytics'
+                      ? 'bg-brand-600 text-white shadow-md shadow-brand-600/20'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  <BarChart3 className="w-3.5 h-3.5" />
+                  <span>Employee Analytics (Week / Month / Year)</span>
+                  <span className="text-[9px] px-1.5 py-0.2 bg-emerald-500 text-white rounded-full uppercase font-bold">New</span>
+                </button>
               </div>
+
+              {attendanceSubTab === 'daily' && (
+                <div className="text-xs text-slate-400">
+                  Select a single date to mark check-ins and daily status.
+                </div>
+              )}
             </div>
 
-            {/* Attendance Table */}
-            <div className={`border rounded-2xl overflow-hidden shadow-lg ${
-              isDark ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-white'
-            }`}>
+            {/* VIEW 1: ADVANCED EMPLOYEE ATTENDANCE ANALYTICS (WEEK / MONTH / YEAR) */}
+            {attendanceSubTab === 'analytics' ? (
+              <AttendanceAnalytics
+                activeShop={activeShop}
+                employees={employees}
+                isOwner={isOwner}
+                onAttendanceUpdated={loadData}
+              />
+            ) : (
+              /* VIEW 2: DAILY ATTENDANCE REGISTER */
+              <div className="space-y-4">
+                <div className="flex flex-wrap justify-between items-center gap-3">
+                  <div>
+                    <h2 className={`text-sm font-bold uppercase tracking-wider ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                      Staff Attendance & Daily Working Hours Register
+                    </h2>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Automatic check-in is logged on POS login. Shop owner can stamp or adjust attendance for any date.
+                    </p>
+                  </div>
+
+                  {/* Date Filter & Batch Actions */}
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="date"
+                      value={selectedAttendanceDate}
+                      onChange={(e) => setSelectedAttendanceDate(e.target.value)}
+                      className={`border rounded-xl px-3 py-1.5 text-xs outline-none font-mono ${
+                        isDark ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
+                      }`}
+                    />
+
+                    {isOwner && (
+                      <button
+                        onClick={() => handleMarkBatchAttendance('PRESENT')}
+                        className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md flex items-center space-x-1 transition-all"
+                      >
+                        <CheckCircle className="w-3.5 h-3.5" />
+                        <span>Mark All Present</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Attendance Table */}
+                <div className={`border rounded-2xl overflow-hidden shadow-lg ${
+                  isDark ? 'border-slate-800 bg-slate-900/60' : 'border-slate-200 bg-white'
+                }`}>
               <table className="w-full text-left text-xs">
                 <thead className={`font-bold uppercase tracking-wider text-[10px] border-b ${
                   isDark ? 'bg-slate-900 text-slate-400 border-slate-800' : 'bg-slate-50 text-slate-600 border-slate-200'
@@ -1417,6 +1465,8 @@ export function HrmsDashboard() {
             </div>
           </div>
         )}
+      </div>
+    )}
 
         {/* Tab 3: Leaves & Approvals */}
         {activeTab === 'leaves' && (

@@ -376,6 +376,14 @@ router.get('/hrms/attendance', (req, res) => {
   res.json(hrmsService.getAttendanceRegister(req.query.shopId, req.query.date));
 });
 
+router.get('/hrms/attendance/analytics', (req, res) => {
+  try {
+    res.json(hrmsService.getAttendanceAnalytics(req.query.shopId, req.query));
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message });
+  }
+});
+
 router.post('/hrms/attendance', (req, res) => {
   res.json(hrmsService.recordAttendance(req.body));
 });

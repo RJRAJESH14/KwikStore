@@ -345,6 +345,375 @@ export function markBatchAttendance(data) {
   return { success: true, count: emps.length, message: `Marked attendance as ${status} for ${emps.length} staff members.` };
 }
 
+export function getAttendanceAnalytics(shopId, params = {}) {
+  const db = getDb();
+  const viewType = params.viewType || 'month'; // 'week', 'month', 'year'
+  const empIdFilter = params.employeeId && params.employeeId !== 'ALL' ? Number(params.employeeId) : null;
+  const targetYear = Number(params.year || new Date().getFullYear());
+  const targetMonth = Number(params.month || (new Date().getMonth() + 1)); // 1-12
+  const targetWeekDate = params.weekDate || new Date().toISOString().slice(0, 10);
+
+  const formatYMD = (d) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+  let empQuery = `SELECT id, employee_code, full_name, designation, department, photo_url FROM employees WHERE status = 'ACTIVE'`;
+  const empParams = [];
+  if (shopId) {
+    empQuery += ` AND shop_id = ?`;
+    empParams.push(shopId);
+  }
+  if (empIdFilter) {
+    empQuery += ` AND id = ?`;
+    empParams.push(empIdFilter);
+  }
+  empQuery += ` ORDER BY full_name ASC`;
+  const employees = db.prepare(empQuery).all(...empParams);
+
+  if (viewType === 'week') {
+    const cur = new Date(targetWeekDate + 'T00:00:00');
+    const dayOfWeek = cur.getDay();
+    const diffToMon = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const monday = new Date(cur);
+    monday.setDate(cur.getDate() + diffToMon);
+
+    const weekDays = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      const ymd = formatYMD(d);
+      weekDays.push({
+        date: ymd,
+        dayName: dayNames[d.getDay()],
+        dayShort: dayNames[d.getDay()].slice(0, 3),
+        dayNumber: d.getDate(),
+        isToday: ymd === formatYMD(new Date())
+      });
+    }
+
+    const startDate = weekDays[0].date;
+    const endDate = weekDays[6].date;
+
+    let attQuery = `
+      SELECT a.*, e.full_name, e.employee_code, e.designation
+      FROM attendance a
+      JOIN employees e ON a.employee_id = e.id
+      WHERE a.date >= ? AND a.date <= ?
+    `;
+    const attParams = [startDate, endDate];
+    if (shopId) {
+      attQuery += ` AND a.shop_id = ?`;
+      attParams.push(shopId);
+    }
+    if (empIdFilter) {
+      attQuery += ` AND a.employee_id = ?`;
+      attParams.push(empIdFilter);
+    }
+
+    const attRows = db.prepare(attQuery).all(...attParams);
+    const attMap = {};
+    for (const r of attRows) {
+      attMap[`${r.employee_id}_${r.date}`] = r;
+    }
+
+    const employeesData = employees.map(emp => {
+      let presentCount = 0;
+      let halfDayCount = 0;
+      let leaveCount = 0;
+      let absentCount = 0;
+      let totalHours = 0;
+
+      const records = weekDays.map(wd => {
+        const att = attMap[`${emp.id}_${wd.date}`];
+        const status = att ? att.status : 'NOT_MARKED';
+        const workHours = att ? Number(att.work_hours || 0) : 0;
+        
+        if (status === 'PRESENT') {
+          presentCount++;
+          totalHours += workHours || 8;
+        } else if (status === 'HALF_DAY') {
+          halfDayCount++;
+          totalHours += workHours || 4;
+        } else if (status === 'PAID_LEAVE' || status === 'LEAVE' || status === 'HOLIDAY') {
+          leaveCount++;
+        } else if (status === 'ABSENT') {
+          absentCount++;
+        }
+
+        return {
+          ...wd,
+          attendance_id: att ? att.id : null,
+          status,
+          check_in_time: att ? att.check_in_time : null,
+          check_out_time: att ? att.check_out_time : null,
+          work_hours: workHours,
+          notes: att ? att.notes : null
+        };
+      });
+
+      const effectivePresent = presentCount + (halfDayCount * 0.5);
+      const totalMarked = presentCount + halfDayCount + leaveCount + absentCount;
+      const attendancePercent = totalMarked > 0 ? Math.round((effectivePresent / totalMarked) * 100) : 0;
+
+      return {
+        employee: emp,
+        records,
+        summary: {
+          totalDays: 7,
+          presentCount,
+          halfDayCount,
+          leaveCount,
+          absentCount,
+          totalHours,
+          attendancePercent
+        }
+      };
+    });
+
+    return {
+      viewType: 'week',
+      startDate,
+      endDate,
+      weekDays,
+      employees: employeesData,
+      singleEmployee: empIdFilter ? employeesData[0] || null : null
+    };
+  }
+
+  if (viewType === 'month') {
+    const daysInMonth = new Date(targetYear, targetMonth, 0).getDate();
+    const monthStr = String(targetMonth).padStart(2, '0');
+    const startDate = `${targetYear}-${monthStr}-01`;
+    const endDate = `${targetYear}-${monthStr}-${String(daysInMonth).padStart(2, '0')}`;
+
+    const monthDays = [];
+    for (let day = 1; day <= daysInMonth; day++) {
+      const d = new Date(targetYear, targetMonth - 1, day);
+      const ymd = formatYMD(d);
+      monthDays.push({
+        date: ymd,
+        dayNumber: day,
+        dayName: dayNames[d.getDay()],
+        dayShort: dayNames[d.getDay()].slice(0, 3),
+        dayOfWeek: d.getDay(),
+        isWeekend: d.getDay() === 0,
+        isToday: ymd === formatYMD(new Date())
+      });
+    }
+
+    let attQuery = `
+      SELECT a.*, e.full_name, e.employee_code, e.designation
+      FROM attendance a
+      JOIN employees e ON a.employee_id = e.id
+      WHERE a.date >= ? AND a.date <= ?
+    `;
+    const attParams = [startDate, endDate];
+    if (shopId) {
+      attQuery += ` AND a.shop_id = ?`;
+      attParams.push(shopId);
+    }
+    if (empIdFilter) {
+      attQuery += ` AND a.employee_id = ?`;
+      attParams.push(empIdFilter);
+    }
+
+    const attRows = db.prepare(attQuery).all(...attParams);
+    const attMap = {};
+    for (const r of attRows) {
+      attMap[`${r.employee_id}_${r.date}`] = r;
+    }
+
+    const employeesData = employees.map(emp => {
+      let presentCount = 0;
+      let halfDayCount = 0;
+      let leaveCount = 0;
+      let absentCount = 0;
+      let totalHours = 0;
+
+      const records = monthDays.map(md => {
+        const att = attMap[`${emp.id}_${md.date}`];
+        const status = att ? att.status : (md.isWeekend ? 'WEEK_OFF' : 'NOT_MARKED');
+        const workHours = att ? Number(att.work_hours || 0) : 0;
+
+        if (status === 'PRESENT') {
+          presentCount++;
+          totalHours += workHours || 8;
+        } else if (status === 'HALF_DAY') {
+          halfDayCount++;
+          totalHours += workHours || 4;
+        } else if (status === 'PAID_LEAVE' || status === 'LEAVE' || status === 'HOLIDAY') {
+          leaveCount++;
+        } else if (status === 'ABSENT') {
+          absentCount++;
+        }
+
+        return {
+          ...md,
+          attendance_id: att ? att.id : null,
+          status,
+          check_in_time: att ? att.check_in_time : null,
+          check_out_time: att ? att.check_out_time : null,
+          work_hours: workHours,
+          notes: att ? att.notes : null
+        };
+      });
+
+      const effectivePresent = presentCount + (halfDayCount * 0.5);
+      const totalWorkDays = daysInMonth - monthDays.filter(d => d.isWeekend).length;
+      const attendancePercent = totalWorkDays > 0 ? Math.min(100, Math.round((effectivePresent / totalWorkDays) * 100)) : 0;
+
+      return {
+        employee: emp,
+        records,
+        summary: {
+          totalDays: daysInMonth,
+          workingDays: totalWorkDays,
+          presentCount,
+          halfDayCount,
+          leaveCount,
+          absentCount,
+          totalHours,
+          attendancePercent
+        }
+      };
+    });
+
+    return {
+      viewType: 'month',
+      year: targetYear,
+      month: targetMonth,
+      monthName: monthNames[targetMonth - 1],
+      startDate,
+      endDate,
+      monthDays,
+      employees: employeesData,
+      singleEmployee: empIdFilter ? employeesData[0] || null : null
+    };
+  }
+
+  if (viewType === 'year') {
+    const yearStr = String(targetYear);
+    const startDate = `${yearStr}-01-01`;
+    const endDate = `${yearStr}-12-31`;
+
+    let attQuery = `
+      SELECT a.*, e.full_name, e.employee_code
+      FROM attendance a
+      JOIN employees e ON a.employee_id = e.id
+      WHERE a.date >= ? AND a.date <= ?
+    `;
+    const attParams = [startDate, endDate];
+    if (shopId) {
+      attQuery += ` AND a.shop_id = ?`;
+      attParams.push(shopId);
+    }
+    if (empIdFilter) {
+      attQuery += ` AND a.employee_id = ?`;
+      attParams.push(empIdFilter);
+    }
+
+    const attRows = db.prepare(attQuery).all(...attParams);
+
+    const empMonthMap = {};
+    for (const r of attRows) {
+      const monthNum = parseInt(r.date.slice(5, 7), 10);
+      const key = `${r.employee_id}_${monthNum}`;
+      if (!empMonthMap[key]) empMonthMap[key] = [];
+      empMonthMap[key].push(r);
+    }
+
+    const employeesData = employees.map(emp => {
+      let grandPresent = 0;
+      let grandHalfDay = 0;
+      let grandLeave = 0;
+      let grandAbsent = 0;
+      let grandHours = 0;
+
+      const monthlyBreakdown = [];
+      for (let m = 1; m <= 12; m++) {
+        const rows = empMonthMap[`${emp.id}_${m}`] || [];
+        const daysInM = new Date(targetYear, m, 0).getDate();
+        
+        let present = 0;
+        let halfDay = 0;
+        let leave = 0;
+        let absent = 0;
+        let hours = 0;
+
+        for (const r of rows) {
+          if (r.status === 'PRESENT') {
+            present++;
+            hours += Number(r.work_hours || 8);
+          } else if (r.status === 'HALF_DAY') {
+            halfDay++;
+            hours += Number(r.work_hours || 4);
+          } else if (r.status === 'PAID_LEAVE' || r.status === 'LEAVE' || r.status === 'HOLIDAY') {
+            leave++;
+          } else if (r.status === 'ABSENT') {
+            absent++;
+          }
+        }
+
+        grandPresent += present;
+        grandHalfDay += halfDay;
+        grandLeave += leave;
+        grandAbsent += absent;
+        grandHours += hours;
+
+        const effectivePresent = present + (halfDay * 0.5);
+        const approxWorkingDays = 26;
+        const monthPercent = approxWorkingDays > 0 ? Math.min(100, Math.round((effectivePresent / approxWorkingDays) * 100)) : 0;
+
+        monthlyBreakdown.push({
+          month: m,
+          monthName: monthNames[m - 1],
+          monthShort: monthNames[m - 1].slice(0, 3),
+          daysInMonth: daysInM,
+          presentCount: present,
+          halfDayCount: halfDay,
+          leaveCount: leave,
+          absentCount: absent,
+          totalHours: hours,
+          attendancePercent: monthPercent
+        });
+      }
+
+      const yearlyEffectivePresent = grandPresent + (grandHalfDay * 0.5);
+      const totalPossibleDays = 26 * 12;
+      const grandPercent = totalPossibleDays > 0 ? Math.min(100, Math.round((yearlyEffectivePresent / totalPossibleDays) * 100)) : 0;
+
+      return {
+        employee: emp,
+        monthlyBreakdown,
+        summary: {
+          year: targetYear,
+          presentCount: grandPresent,
+          halfDayCount: grandHalfDay,
+          leaveCount: grandLeave,
+          absentCount: grandAbsent,
+          totalHours: grandHours,
+          attendancePercent: grandPercent
+        }
+      };
+    });
+
+    return {
+      viewType: 'year',
+      year: targetYear,
+      employees: employeesData,
+      singleEmployee: empIdFilter ? employeesData[0] || null : null
+    };
+  }
+
+  return { viewType, employees: [] };
+}
+
 // 3. Leave Management
 export function getLeaves(shopId) {
   const db = getDb();

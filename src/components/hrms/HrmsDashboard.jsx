@@ -51,7 +51,8 @@ import {
   AlertTriangle,
   FileUp,
   Image as ImageIcon,
-  UserX
+  UserX,
+  BarChart3
 } from 'lucide-react';
 
 // Standard 7 KYC & Academic Document Types

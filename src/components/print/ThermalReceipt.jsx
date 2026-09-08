@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTheme } from '../../context/ThemeContext';
 import { generateUpiQrDataUrl } from '../../utils/upiQr';
 import { formatCurrency } from '../../utils/gstUtils';
 import { BarcodeSvg } from '../common/BarcodeSvg';
@@ -6,6 +7,7 @@ import { openWhatsAppInvoice } from '../../utils/whatsappUtils';
 import { Printer, X, Share2, Copy, Check, QrCode, FileText, Download, Sparkles } from 'lucide-react';
 
 export function ThermalReceipt({ invoice, onClose, onPrint, onSwitchToA4 }) {
+  const { isDark } = useTheme();
   const [qrCodeUrl, setQrCodeUrl] = useState(null);
   const [paperWidth, setPaperWidth] = useState('80mm'); // '80mm' or '58mm'
   const [copied, setCopied] = useState(false);
@@ -89,30 +91,48 @@ export function ThermalReceipt({ invoice, onClose, onPrint, onSwitchToA4 }) {
   const is58 = paperWidth === '58mm';
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md shadow-2xl flex flex-col max-h-[94vh] my-auto animate-in zoom-in-95">
+    <div className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+      <div className={`border rounded-2xl w-full max-w-md shadow-2xl flex flex-col max-h-[94vh] my-auto animate-in zoom-in-95 overflow-hidden ${
+        isDark ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-900'
+      }`}>
         {/* Modal Controls Top Bar (Hidden during printing) */}
-        <div className="p-3 bg-slate-800/95 border-b border-slate-700 flex items-center justify-between shrink-0 print:hidden">
+        <div className={`p-3 border-b flex items-center justify-between shrink-0 print:hidden ${
+          isDark ? 'bg-slate-800/95 border-slate-700' : 'bg-slate-100 border-slate-200'
+        }`}>
           <div className="flex items-center space-x-2">
-            <Printer className="w-4 h-4 text-brand-400" />
+            <Printer className="w-4 h-4 text-brand-600 dark:text-brand-400" />
             <div>
-              <span className="text-xs font-bold text-white">Thermal POS Receipt</span>
-              <span className="text-[10px] text-slate-400 font-mono block">#{invoice.invoice_number}</span>
+              <span className={`text-xs font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                Thermal POS Receipt
+              </span>
+              <span className={`text-[10px] font-mono block ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                #{invoice.invoice_number}
+              </span>
             </div>
           </div>
 
           {/* Width & Action Buttons */}
           <div className="flex items-center space-x-1.5">
-            <div className="flex items-center border border-slate-700 rounded-lg p-0.5 bg-slate-950 text-[10px] font-mono">
+            <div className={`flex items-center border rounded-lg p-0.5 text-[10px] font-mono ${
+              isDark ? 'border-slate-700 bg-slate-950' : 'border-slate-300 bg-white'
+            }`}>
               <button
                 onClick={() => setPaperWidth('80mm')}
-                className={`px-2 py-0.5 rounded transition-all ${paperWidth === '80mm' ? 'bg-brand-600 text-white font-bold' : 'text-slate-400 hover:text-white'}`}
+                className={`px-2 py-0.5 rounded transition-all ${
+                  paperWidth === '80mm' 
+                    ? 'bg-brand-600 text-white font-bold' 
+                    : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'
+                }`}
               >
                 80mm
               </button>
               <button
                 onClick={() => setPaperWidth('58mm')}
-                className={`px-2 py-0.5 rounded transition-all ${paperWidth === '58mm' ? 'bg-brand-600 text-white font-bold' : 'text-slate-400 hover:text-white'}`}
+                className={`px-2 py-0.5 rounded transition-all ${
+                  paperWidth === '58mm' 
+                    ? 'bg-brand-600 text-white font-bold' 
+                    : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'
+                }`}
               >
                 58mm
               </button>
@@ -121,17 +141,19 @@ export function ThermalReceipt({ invoice, onClose, onPrint, onSwitchToA4 }) {
             {onSwitchToA4 && (
               <button
                 onClick={onSwitchToA4}
-                className="px-2 py-1 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center space-x-1 transition-all"
+                className={`px-2 py-1 rounded-lg border text-xs font-semibold flex items-center space-x-1 transition-all ${
+                  isDark ? 'border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200' : 'border-slate-300 bg-white hover:bg-slate-50 text-slate-700'
+                }`}
                 title="Switch to A4 Tax Invoice Format"
               >
-                <FileText className="w-3.5 h-3.5 text-cyan-400" />
+                <FileText className="w-3.5 h-3.5 text-cyan-500" />
                 <span className="hidden sm:inline">A4</span>
               </button>
             )}
 
             <button
               onClick={handleShareWhatsApp}
-              className="p-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs font-semibold transition-all"
+              className="p-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold transition-all"
               title="Share receipt on WhatsApp"
             >
               <Share2 className="w-3.5 h-3.5" />
@@ -139,10 +161,12 @@ export function ThermalReceipt({ invoice, onClose, onPrint, onSwitchToA4 }) {
 
             <button
               onClick={handleDownloadHtml}
-              className="p-1.5 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-all"
+              className={`p-1.5 rounded-lg border text-xs font-semibold transition-all ${
+                isDark ? 'border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200' : 'border-slate-300 bg-white hover:bg-slate-50 text-slate-700'
+              }`}
               title="Download receipt HTML file"
             >
-              <Download className="w-3.5 h-3.5 text-sky-400" />
+              <Download className="w-3.5 h-3.5 text-sky-500" />
             </button>
 
             <button
@@ -153,14 +177,21 @@ export function ThermalReceipt({ invoice, onClose, onPrint, onSwitchToA4 }) {
               <span>Print</span>
             </button>
 
-            <button onClick={onClose} className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 transition-all">
+            <button 
+              onClick={onClose} 
+              className={`p-1 rounded-lg transition-all ${
+                isDark ? 'text-slate-400 hover:text-white hover:bg-slate-700' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-200'
+              }`}
+            >
               <X className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {/* Receipt Content Body */}
-        <div className="p-4 overflow-y-auto bg-slate-950 flex justify-center">
+        {/* Receipt Paper Viewport */}
+        <div className={`p-4 overflow-y-auto flex justify-center ${
+          isDark ? 'bg-slate-950' : 'bg-slate-200/60'
+        }`}>
           <div 
             id="printable-thermal-receipt" 
             className="bg-white text-black p-4 shadow-xl font-mono border border-slate-300 print:border-none print:shadow-none print:p-1" 

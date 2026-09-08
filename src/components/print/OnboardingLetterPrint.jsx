@@ -1,8 +1,10 @@
 import React from 'react';
+import { useTheme } from '../../context/ThemeContext';
 import { numberToIndianWords } from '../../utils/numberToWords';
 import { Printer, X, Download, Share2, Building2, CheckCircle2, Award, Calendar, FileText, UserCheck, Shield } from 'lucide-react';
 
 export function OnboardingLetterPrint({ employee, shop, onClose }) {
+  const { isDark } = useTheme();
   if (!employee) return null;
 
   const basicPay = Number(employee.monthly_basic_salary || 0);
@@ -78,22 +80,26 @@ export function OnboardingLetterPrint({ employee, shop, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto print:p-0 print:bg-white print:fixed-none">
-      <div className="bg-white text-slate-900 w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden border border-slate-200 flex flex-col my-auto print:border-none print:shadow-none print:rounded-none">
+      <div className={`w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden border flex flex-col my-auto print:border-none print:shadow-none print:rounded-none ${
+        isDark ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-900'
+      }`}>
         
         {/* Top Control Bar (Hidden in Print) */}
-        <div className="bg-slate-900 text-white px-6 py-4 flex flex-wrap items-center justify-between gap-3 print:hidden">
+        <div className={`px-6 py-4 flex flex-wrap items-center justify-between gap-3 border-b print:hidden ${
+          isDark ? 'bg-slate-900 border-slate-800 text-white' : 'bg-slate-100 border-slate-200 text-slate-900'
+        }`}>
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-purple-400">
+            <div className="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-purple-600 dark:text-purple-400">
               <Award className="w-5 h-5" />
             </div>
             <div>
               <h2 className="text-base font-bold flex items-center space-x-2">
-                <span>Official Appointment & Onboarding Letter</span>
-                <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-purple-500/30 text-purple-300 border border-purple-400/30">
+                <span className={isDark ? 'text-white' : 'text-slate-900'}>Official Appointment & Onboarding Letter</span>
+                <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-purple-500/20 text-purple-600 dark:text-purple-300 border border-purple-400/30">
                   {employee.employee_code}
                 </span>
               </h2>
-              <p className="text-xs text-slate-400">
+              <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                 Formal employment confirmation letter with compensation breakdown & terms of employment.
               </p>
             </div>
@@ -111,24 +117,28 @@ export function OnboardingLetterPrint({ employee, shop, onClose }) {
 
             <button
               onClick={handleDownloadHtml}
-              className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold border border-slate-700 flex items-center space-x-1.5 transition-all"
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold border flex items-center space-x-1.5 transition-all ${
+                isDark ? 'bg-slate-800 hover:bg-slate-700 text-white border-slate-700' : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-300'
+              }`}
               title="Download HTML Letter"
             >
-              <Download className="w-4 h-4" />
+              <Download className="w-4 h-4 text-sky-500" />
               <span>Download</span>
             </button>
 
             <button
               onClick={handlePrint}
-              className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-lg shadow-purple-600/30 flex items-center space-x-1.5 transition-all"
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold shadow-lg shadow-purple-600/20 flex items-center space-x-1.5 transition-all"
             >
               <Printer className="w-4 h-4" />
-              <span>Print Letter (A4)</span>
+              <span>Print Letter</span>
             </button>
 
-            <button
-              onClick={onClose}
-              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-all ml-1"
+            <button 
+              onClick={onClose} 
+              className={`p-2 rounded-xl transition-all ${
+                isDark ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-200'
+              }`}
             >
               <X className="w-5 h-5" />
             </button>

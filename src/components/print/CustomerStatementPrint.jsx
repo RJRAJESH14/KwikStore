@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
+import { useTheme } from '../../context/ThemeContext';
 import { generateUpiQrDataUrl } from '../../utils/upiQr';
 import { Printer, X, Download, FileText, Share2, DollarSign, Calendar, Building, Phone } from 'lucide-react';
 
 export function CustomerStatementPrint({ customer, ledger, summary, shop, dateRange, onClose }) {
+  const { isDark } = useTheme();
   const [upiQrUrl, setUpiQrUrl] = useState(null);
 
   useEffect(() => {
@@ -79,22 +81,30 @@ export function CustomerStatementPrint({ customer, ledger, summary, shop, dateRa
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl shadow-2xl flex flex-col max-h-[95vh] my-auto animate-in zoom-in-95">
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+      <div className={`border rounded-2xl w-full max-w-4xl shadow-2xl flex flex-col max-h-[95vh] my-auto animate-in zoom-in-95 overflow-hidden ${
+        isDark ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-900'
+      }`}>
         {/* Header Modal Bar */}
-        <div className="p-4 bg-slate-800/90 border-b border-slate-700 flex items-center justify-between shrink-0 print:hidden">
+        <div className={`p-4 border-b flex items-center justify-between shrink-0 print:hidden ${
+          isDark ? 'bg-slate-800/90 border-slate-700' : 'bg-slate-100 border-slate-200'
+        }`}>
           <div className="flex items-center space-x-2">
-            <FileText className="w-5 h-5 text-brand-400" />
+            <FileText className="w-5 h-5 text-brand-600 dark:text-brand-400" />
             <div>
-              <h3 className="text-sm font-bold text-white">Customer Statement of Account (PDF Report)</h3>
-              <p className="text-xs text-slate-400 font-mono">{customer.name} • {dateRange?.label || 'All Time'}</p>
+              <h3 className={`text-sm font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                Customer Statement of Account (PDF Report)
+              </h3>
+              <p className={`text-xs font-mono ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                {customer.name} • {dateRange?.label || 'All Time'}
+              </p>
             </div>
           </div>
 
           <div className="flex items-center space-x-2">
             <button
               onClick={handleShareWhatsApp}
-              className="p-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs font-semibold flex items-center space-x-1"
+              className="p-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold flex items-center space-x-1"
               title="Share Statement via WhatsApp"
             >
               <Share2 className="w-4 h-4" />
@@ -103,29 +113,38 @@ export function CustomerStatementPrint({ customer, ledger, summary, shop, dateRa
 
             <button
               onClick={handleDownloadHtml}
-              className="px-3 py-2 rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center space-x-1.5 transition-all"
+              className={`px-3 py-2 rounded-xl border text-xs font-semibold flex items-center space-x-1.5 transition-all ${
+                isDark ? 'border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200' : 'border-slate-300 bg-white hover:bg-slate-50 text-slate-700'
+              }`}
               title="Download Statement HTML/PDF File"
             >
-              <Download className="w-4 h-4 text-sky-400" />
+              <Download className="w-4 h-4 text-sky-500" />
               <span>Download Statement</span>
             </button>
 
             <button
               onClick={handlePrint}
-              className="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold shadow-lg shadow-brand-500/20 flex items-center space-x-1.5 transition-all"
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-brand-600 to-emerald-600 hover:from-brand-500 hover:to-emerald-500 text-white text-xs font-bold shadow-lg shadow-brand-500/20 flex items-center space-x-1.5 transition-all"
             >
               <Printer className="w-4 h-4" />
-              <span>Print / Save PDF</span>
+              <span>Print Statement</span>
             </button>
 
-            <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700">
+            <button 
+              onClick={onClose} 
+              className={`p-2 rounded-xl transition-all ${
+                isDark ? 'text-slate-400 hover:text-white hover:bg-slate-700' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-200'
+              }`}
+            >
               <X className="w-5 h-5" />
             </button>
           </div>
         </div>
 
-        {/* Printable Viewport */}
-        <div className="p-6 overflow-y-auto bg-slate-950 flex justify-center">
+        {/* Scrollable Document Body */}
+        <div className={`p-6 overflow-y-auto flex justify-center ${
+          isDark ? 'bg-slate-950/80' : 'bg-slate-200/60'
+        }`}>
           <div id="printable-customer-statement" className="w-[820px] bg-white text-slate-900 p-8 rounded-lg shadow-2xl text-xs font-sans border border-slate-200">
             {/* Store Letterhead */}
             <div className="flex justify-between items-start pb-4 border-b-2 border-slate-900">

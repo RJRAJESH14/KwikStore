@@ -1,8 +1,10 @@
 import React from 'react';
+import { useTheme } from '../../context/ThemeContext';
 import { numberToIndianWords } from '../../utils/numberToWords';
 import { Printer, X, FileSpreadsheet, Share2, Download, Building2, User, Calendar, ShieldCheck, CheckCircle2 } from 'lucide-react';
 
 export function SalarySlipPrint({ payrollRecord, shop, onClose }) {
+  const { isDark } = useTheme();
   if (!payrollRecord) return null;
 
   const handlePrint = () => {
@@ -81,35 +83,43 @@ export function SalarySlipPrint({ payrollRecord, shop, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-3xl shadow-2xl flex flex-col max-h-[94vh] my-auto animate-in zoom-in-95">
+    <div className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+      <div className={`border rounded-2xl w-full max-w-3xl shadow-2xl flex flex-col max-h-[94vh] my-auto animate-in zoom-in-95 overflow-hidden ${
+        isDark ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-900'
+      }`}>
         
         {/* Controls Bar */}
-        <div className="p-3.5 bg-slate-800/95 border-b border-slate-700 flex items-center justify-between shrink-0 print:hidden">
+        <div className={`p-3.5 border-b flex items-center justify-between shrink-0 print:hidden ${
+          isDark ? 'bg-slate-800/95 border-slate-700' : 'bg-slate-100 border-slate-200'
+        }`}>
           <div className="flex items-center space-x-2.5">
-            <div className="w-8 h-8 rounded-lg bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-purple-400">
+            <div className="w-8 h-8 rounded-lg bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-purple-600 dark:text-purple-400">
               <FileSpreadsheet className="w-4 h-4" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <span className="text-xs font-bold text-white">Employee Salary Slip</span>
-                <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-purple-500/10 text-purple-300 border border-purple-500/30">
+                <span className={`text-xs font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                  Employee Salary Slip
+                </span>
+                <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/30">
                   {payrollRecord.employee_code}
                 </span>
                 {pfDeduction > 0 && (
-                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/30">
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-600 dark:text-cyan-300 border border-cyan-500/30">
                     PF Enrolled
                   </span>
                 )}
               </div>
-              <p className="text-[10px] text-slate-400">Month: {payrollRecord.month_year} • {payrollRecord.full_name}</p>
+              <p className={`text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                Month: {payrollRecord.month_year} • {payrollRecord.full_name}
+              </p>
             </div>
           </div>
 
           <div className="flex items-center space-x-2">
             <button
               onClick={handleShareWhatsApp}
-              className="p-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs font-semibold flex items-center space-x-1 transition-all"
+              className="p-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold flex items-center space-x-1 transition-all"
               title="Send Salary Slip via WhatsApp"
             >
               <Share2 className="w-4 h-4" />
@@ -118,29 +128,38 @@ export function SalarySlipPrint({ payrollRecord, shop, onClose }) {
 
             <button
               onClick={handleDownloadHtml}
-              className="px-2.5 py-1.5 rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center space-x-1.5 transition-all"
+              className={`px-2.5 py-1.5 rounded-xl border text-xs font-semibold flex items-center space-x-1.5 transition-all ${
+                isDark ? 'border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200' : 'border-slate-300 bg-white hover:bg-slate-50 text-slate-700'
+              }`}
               title="Download standalone payslip HTML"
             >
-              <Download className="w-3.5 h-3.5 text-sky-400" />
+              <Download className="w-3.5 h-3.5 text-sky-500" />
               <span>Download</span>
             </button>
 
             <button
               onClick={handlePrint}
-              className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold shadow-lg shadow-purple-600/20 flex items-center space-x-1.5 transition-all"
+              className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold shadow-md shadow-purple-500/20 flex items-center space-x-1.5 transition-all"
             >
-              <Printer className="w-4 h-4" />
-              <span>Print Salary Slip</span>
+              <Printer className="w-3.5 h-3.5" />
+              <span>Print Slip</span>
             </button>
 
-            <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 transition-all">
-              <X className="w-5 h-5" />
+            <button 
+              onClick={onClose} 
+              className={`p-1.5 rounded-lg transition-all ${
+                isDark ? 'text-slate-400 hover:text-white hover:bg-slate-700' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-200'
+              }`}
+            >
+              <X className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {/* Printable Viewport */}
-        <div className="p-6 overflow-y-auto bg-slate-950 flex justify-center">
+        {/* Payslip Viewport */}
+        <div className={`p-6 overflow-y-auto flex justify-center ${
+          isDark ? 'bg-slate-950' : 'bg-slate-200/60'
+        }`}>
           <div 
             id="printable-salary-slip" 
             className="w-[720px] bg-white text-slate-900 p-8 rounded-xl shadow-2xl text-xs font-sans border border-slate-300 space-y-4 print:p-0 print:border-none print:shadow-none"

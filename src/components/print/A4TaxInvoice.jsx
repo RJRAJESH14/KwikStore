@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { useTheme } from '../../context/ThemeContext';
 import { generateUpiQrDataUrl } from '../../utils/upiQr';
 import { numberToIndianWords } from '../../utils/numberToWords';
 import { formatCurrency } from '../../utils/gstUtils';
@@ -7,6 +8,7 @@ import { openWhatsAppInvoice, generateWhatsAppInvoiceText } from '../../utils/wh
 import { Printer, X, Download, FileText, Share2, Receipt, CheckCircle, ShieldCheck, Landmark, Building2, Phone, Mail, MapPin, Copy, Check } from 'lucide-react';
 
 export function A4TaxInvoice({ invoice, onClose, onPrint, onSwitchToThermal }) {
+  const { isDark } = useTheme();
   const [qrCodeUrl, setQrCodeUrl] = useState(null);
   const [copyType, setCopyType] = useState('ORIGINAL FOR RECIPIENT'); // ORIGINAL FOR RECIPIENT, DUPLICATE FOR TRANSPORTER, TRIPLICATE FOR SUPPLIER
   const [copiedBill, setCopiedBill] = useState(false);
@@ -139,23 +141,31 @@ export function A4TaxInvoice({ invoice, onClose, onPrint, onSwitchToThermal }) {
   const formattedTime = isNaN(safeDate.getTime()) ? '' : safeDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl shadow-2xl flex flex-col max-h-[96vh] my-auto animate-in zoom-in-95">
+    <div className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+      <div className={`border rounded-2xl w-full max-w-4xl shadow-2xl flex flex-col max-h-[96vh] my-auto animate-in zoom-in-95 overflow-hidden ${
+        isDark ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-900'
+      }`}>
         
         {/* Header Modal Bar (Controls) */}
-        <div className="p-3.5 bg-slate-800/95 border-b border-slate-700 flex flex-wrap items-center justify-between gap-3 shrink-0 print:hidden">
+        <div className={`p-3.5 border-b flex flex-wrap items-center justify-between gap-3 shrink-0 print:hidden ${
+          isDark ? 'bg-slate-800/95 border-slate-700' : 'bg-slate-100 border-slate-200'
+        }`}>
           <div className="flex items-center space-x-2.5">
-            <div className="w-8 h-8 rounded-lg bg-brand-500/20 border border-brand-500/30 flex items-center justify-center text-brand-400">
+            <div className="w-8 h-8 rounded-lg bg-brand-500/20 border border-brand-500/30 flex items-center justify-center text-brand-600 dark:text-brand-400">
               <FileText className="w-4 h-4" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <h3 className="text-xs font-bold text-white tracking-wide">GST Tax Invoice (A4 Standard)</h3>
-                <span className="text-[10px] font-semibold text-brand-400 bg-brand-500/10 px-2 py-0.5 rounded border border-brand-500/20 font-mono">
+                <h3 className={`text-xs font-bold tracking-wide ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                  GST Tax Invoice (A4 Standard)
+                </h3>
+                <span className="text-[10px] font-semibold text-brand-600 dark:text-brand-400 bg-brand-500/10 px-2 py-0.5 rounded border border-brand-500/20 font-mono">
                   #{invoice.invoice_number}
                 </span>
               </div>
-              <p className="text-[10px] text-slate-400">Government GST Compliant & E-Way Ready</p>
+              <p className={`text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                Government GST Compliant & E-Way Ready
+              </p>
             </div>
           </div>
 
@@ -164,7 +174,11 @@ export function A4TaxInvoice({ invoice, onClose, onPrint, onSwitchToThermal }) {
             <select
               value={copyType}
               onChange={(e) => setCopyType(e.target.value)}
-              className="bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-xl px-2.5 py-1.5 font-semibold outline-none cursor-pointer focus:border-brand-500"
+              className={`border text-xs rounded-xl px-2.5 py-1.5 font-semibold outline-none cursor-pointer focus:border-brand-500 ${
+                isDark 
+                  ? 'bg-slate-950 border-slate-700 text-slate-200' 
+                  : 'bg-white border-slate-300 text-slate-800'
+              }`}
             >
               <option value="ORIGINAL FOR RECIPIENT">Original (Recipient)</option>
               <option value="DUPLICATE FOR TRANSPORTER">Duplicate (Transporter)</option>
@@ -174,10 +188,14 @@ export function A4TaxInvoice({ invoice, onClose, onPrint, onSwitchToThermal }) {
             {onSwitchToThermal && (
               <button
                 onClick={onSwitchToThermal}
-                className="px-2.5 py-1.5 rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center space-x-1.5 transition-all shadow-sm"
+                className={`px-2.5 py-1.5 rounded-xl border text-xs font-semibold flex items-center space-x-1.5 transition-all shadow-sm ${
+                  isDark 
+                    ? 'border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200' 
+                    : 'border-slate-300 bg-white hover:bg-slate-50 text-slate-700'
+                }`}
                 title="Switch to 80mm Thermal Receipt Slip Format"
               >
-                <Receipt className="w-3.5 h-3.5 text-amber-400" />
+                <Receipt className="w-3.5 h-3.5 text-amber-500" />
                 <span>Thermal Slip</span>
               </button>
             )}
@@ -186,18 +204,20 @@ export function A4TaxInvoice({ invoice, onClose, onPrint, onSwitchToThermal }) {
               onClick={handleCopyBillText}
               className={`px-2.5 py-1.5 rounded-xl border text-xs font-semibold flex items-center space-x-1.5 transition-all shadow-sm ${
                 copiedBill 
-                  ? 'border-emerald-500 bg-emerald-500/20 text-emerald-400' 
-                  : 'border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200'
+                  ? 'border-emerald-500 bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' 
+                  : isDark 
+                    ? 'border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200' 
+                    : 'border-slate-300 bg-white hover:bg-slate-50 text-slate-700'
               }`}
               title="Copy formatted invoice text with full item breakdown to clipboard"
             >
-              {copiedBill ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-slate-400" />}
+              {copiedBill ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5 text-slate-400" />}
               <span>{copiedBill ? 'Copied!' : 'Copy Bill Text'}</span>
             </button>
 
             <button
               onClick={handleShareWhatsApp}
-              className="px-2.5 py-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs font-semibold flex items-center space-x-1.5 transition-all"
+              className="px-2.5 py-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold flex items-center space-x-1.5 transition-all"
               title="Share full itemized invoice on WhatsApp"
             >
               <Share2 className="w-3.5 h-3.5" />
@@ -206,10 +226,14 @@ export function A4TaxInvoice({ invoice, onClose, onPrint, onSwitchToThermal }) {
 
             <button
               onClick={handleDownloadHtml}
-              className="px-2.5 py-1.5 rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center space-x-1.5 transition-all"
+              className={`px-2.5 py-1.5 rounded-xl border text-xs font-semibold flex items-center space-x-1.5 transition-all ${
+                isDark 
+                  ? 'border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200' 
+                  : 'border-slate-300 bg-white hover:bg-slate-50 text-slate-700'
+              }`}
               title="Download standalone invoice HTML/PDF file"
             >
-              <Download className="w-3.5 h-3.5 text-sky-400" />
+              <Download className="w-3.5 h-3.5 text-sky-500" />
               <span>Download</span>
             </button>
 
@@ -221,14 +245,23 @@ export function A4TaxInvoice({ invoice, onClose, onPrint, onSwitchToThermal }) {
               <span>Print Invoice</span>
             </button>
 
-            <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 transition-all">
+            <button 
+              onClick={onClose} 
+              className={`p-1.5 rounded-lg transition-all ${
+                isDark 
+                  ? 'text-slate-400 hover:text-white hover:bg-slate-700' 
+                  : 'text-slate-400 hover:text-slate-800 hover:bg-slate-200'
+              }`}
+            >
               <X className="w-5 h-5" />
             </button>
           </div>
         </div>
 
         {/* A4 Document Viewport */}
-        <div className="p-6 overflow-y-auto bg-slate-950 flex justify-center">
+        <div className={`p-6 overflow-y-auto flex justify-center ${
+          isDark ? 'bg-slate-950' : 'bg-slate-200/60'
+        }`}>
           <div 
             id="printable-a4-invoice" 
             className="w-[820px] bg-white text-slate-900 p-8 rounded-xl shadow-2xl text-xs font-sans border border-slate-300 space-y-4 print:p-0 print:border-none print:shadow-none"

@@ -179,6 +179,10 @@ export function HrmsDashboard() {
     address: '',
     father_name: '',
     emergency_phone: '',
+    blood_group: 'O+',
+    gender: 'Male',
+    date_of_birth: '',
+    shift_type: 'GENERAL',
     date_of_joining: new Date().toISOString().slice(0, 10),
     designation: 'Cashier & Biller',
     department: 'Sales & Billing',
@@ -405,6 +409,10 @@ export function HrmsDashboard() {
       address: emp.address || '',
       father_name: emp.father_name || '',
       emergency_phone: emp.emergency_phone || '',
+      blood_group: emp.blood_group || 'O+',
+      gender: emp.gender || 'Male',
+      date_of_birth: emp.date_of_birth || '',
+      shift_type: emp.shift_type || 'GENERAL',
       date_of_joining: emp.date_of_joining || new Date().toISOString().slice(0, 10),
       designation: emp.designation || 'Staff',
       department: emp.department || 'Sales & Billing',
@@ -2203,6 +2211,68 @@ export function HrmsDashboard() {
                       }`}
                       placeholder="employee@gmail.com"
                     />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                  <div>
+                    <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Blood Group</label>
+                    <select
+                      value={empForm.blood_group || 'O+'}
+                      onChange={(e) => setEmpForm({ ...empForm, blood_group: e.target.value })}
+                      className={`w-full border rounded-xl p-2 font-bold outline-none cursor-pointer ${
+                        isDark ? 'bg-slate-900 border-slate-700 text-rose-400' : 'bg-white border-slate-300 text-rose-600'
+                      }`}
+                    >
+                      <option value="O+">O+ (Universal Donor)</option>
+                      <option value="A+">A+</option>
+                      <option value="B+">B+</option>
+                      <option value="AB+">AB+ (Universal Recipient)</option>
+                      <option value="O-">O-</option>
+                      <option value="A-">A-</option>
+                      <option value="B-">B-</option>
+                      <option value="AB-">AB-</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Gender</label>
+                    <select
+                      value={empForm.gender || 'Male'}
+                      onChange={(e) => setEmpForm({ ...empForm, gender: e.target.value })}
+                      className={`w-full border rounded-xl p-2 outline-none cursor-pointer ${
+                        isDark ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
+                      }`}
+                    >
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Date of Birth</label>
+                    <input
+                      type="date"
+                      value={empForm.date_of_birth || ''}
+                      onChange={(e) => setEmpForm({ ...empForm, date_of_birth: e.target.value })}
+                      className={`w-full border rounded-xl p-2 font-mono outline-none ${
+                        isDark ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
+                      }`}
+                    />
+                  </div>
+                  <div>
+                    <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Shift Timing</label>
+                    <select
+                      value={empForm.shift_type || 'GENERAL'}
+                      onChange={(e) => setEmpForm({ ...empForm, shift_type: e.target.value })}
+                      className={`w-full border rounded-xl p-2 outline-none cursor-pointer ${
+                        isDark ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
+                      }`}
+                    >
+                      <option value="GENERAL">General (09:00 - 18:00)</option>
+                      <option value="MORNING">Morning (07:00 - 16:00)</option>
+                      <option value="EVENING">Evening (13:00 - 22:00)</option>
+                      <option value="NIGHT">Night (21:00 - 06:00)</option>
+                    </select>
                   </div>
                 </div>
 

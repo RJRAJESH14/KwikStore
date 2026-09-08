@@ -21,10 +21,6 @@ export function AttendanceReportPrint({
 
   if (!analyticsData) return null;
 
-  const handlePrint = () => {
-    window.print();
-  };
-
   const isAll = selectedEmployeeId === 'ALL';
   const singleEmp = analyticsData.singleEmployee;
   const periodTitle = viewType === 'month' 
@@ -32,6 +28,69 @@ export function AttendanceReportPrint({
     : viewType === 'year'
     ? `Annual ${currentYear}`
     : `Week (${analyticsData.startDate} to ${analyticsData.endDate})`;
+
+  const handlePrint = () => {
+    const element = document.getElementById('printable-attendance-report');
+    if (!element) {
+      window.print();
+      return;
+    }
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(`
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Attendance Report - ${periodTitle}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @media print {
+      @page { size: A4 portrait; margin: 8mm; }
+      body { 
+        -webkit-print-color-adjust: exact !important; 
+        print-color-adjust: exact !important; 
+        background: #ffffff !important; 
+        color: #000000 !important; 
+        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border: 1px solid #cbd5e1; }
+    }
+  </style>
+</head>
+<body class="bg-white p-6 font-sans text-slate-900">
+  ${element.innerHTML}
+</body>
+</html>`);
+    doc.close();
+
+    setTimeout(() => {
+      try {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+      } catch (err) {
+        console.error('Print iframe error, fallback to window.print', err);
+        window.print();
+      } finally {
+        setTimeout(() => {
+          try {
+            document.body.removeChild(iframe);
+          } catch (e) {}
+        }, 2000);
+      }
+    }, 450);
+  };
 
   const handleShareWhatsApp = () => {
     let text = `*📋 ATTENDANCE REPORT - ${periodTitle}*\n`;
@@ -124,7 +183,7 @@ export function AttendanceReportPrint({
           <div className="flex items-center gap-2">
             <button
               onClick={handlePrint}
-              className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-all"
+              className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-all active:scale-95"
             >
               <Printer className="w-4 h-4" />
               Print / Save PDF

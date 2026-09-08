@@ -82,21 +82,18 @@ html.dark ::-webkit-scrollbar-thumb:hover {
   @apply bg-slate-900 border border-slate-800 shadow-lg rounded-xl text-slate-100;
 }
 
-/* Dedicated Print Styles for 80mm Thermal & A4 Tax Invoices */
+/* Dedicated Print Styles for 80mm Thermal & A4 Tax Invoices, Payroll, Statements & Reports */
 @media print {
   body * {
     visibility: hidden;
   }
 
-  #printable-thermal-receipt, #printable-thermal-receipt * {
-    visibility: visible;
-  }
-
-  #printable-a4-invoice, #printable-a4-invoice * {
-    visibility: visible;
-  }
-
-  #printable-salary-slip, #printable-salary-slip * {
+  #printable-thermal-receipt, #printable-thermal-receipt *,
+  #printable-a4-invoice, #printable-a4-invoice *,
+  #printable-salary-slip, #printable-salary-slip *,
+  #printable-attendance-report, #printable-attendance-report *,
+  #printable-customer-statement, #printable-customer-statement *,
+  #printable-onboarding-letter, #printable-onboarding-letter * {
     visibility: visible;
   }
 
@@ -111,13 +108,17 @@ html.dark ::-webkit-scrollbar-thumb:hover {
     border: none !important;
   }
 
-  #printable-a4-invoice, #printable-salary-slip {
+  #printable-a4-invoice, 
+  #printable-salary-slip, 
+  #printable-attendance-report, 
+  #printable-customer-statement, 
+  #printable-onboarding-letter {
     position: absolute;
     left: 0;
     top: 0;
     width: 100% !important;
     margin: 0 !important;
-    padding: 20px !important;
+    padding: 16px !important;
     box-shadow: none !important;
     border: none !important;
   }

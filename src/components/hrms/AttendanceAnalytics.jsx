@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '../../context/ThemeContext';
+import { AttendanceReportPrint } from '../print/AttendanceReportPrint';
 import { 
   Calendar, 
   Clock, 
@@ -30,6 +31,7 @@ export function AttendanceAnalytics({ activeShop, employees = [], isOwner, onAtt
   // View state
   const [viewType, setViewType] = useState('month'); // 'week' | 'month' | 'year'
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('ALL'); // 'ALL' or employeeId
+  const [showPrintModal, setShowPrintModal] = useState(false);
   
   // Date states
   const today = new Date();
@@ -192,7 +194,7 @@ export function AttendanceAnalytics({ activeShop, employees = [], isOwner, onAtt
 
   // Print function
   const handlePrint = () => {
-    window.print();
+    setShowPrintModal(true);
   };
 
   // Export CSV function
@@ -1250,6 +1252,20 @@ export function AttendanceAnalytics({ activeShop, employees = [], isOwner, onAtt
             </form>
           </div>
         </div>
+      )}
+
+      {/* Dedicated Printable Attendance Register Modal */}
+      {showPrintModal && (
+        <AttendanceReportPrint
+          shop={activeShop}
+          analyticsData={analyticsData}
+          viewType={viewType}
+          selectedEmployeeId={selectedEmployeeId}
+          currentMonth={currentMonth}
+          currentYear={currentYear}
+          currentWeekDate={currentWeekDate}
+          onClose={() => setShowPrintModal(false)}
+        />
       )}
     </div>
   );

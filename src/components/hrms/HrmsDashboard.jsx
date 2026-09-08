@@ -6,6 +6,7 @@ import { SalarySlipPrint } from '../print/SalarySlipPrint';
 import { OnboardingLetterPrint } from '../print/OnboardingLetterPrint';
 import { EmployeeIdCardModal } from './EmployeeIdCardModal';
 import { AttendanceAnalytics } from './AttendanceAnalytics';
+import { StaffDirectoryView } from './StaffDirectoryView';
 import { PORTAL_MODULES } from '../staff/StaffRbacManager';
 import { numberToIndianWords } from '../../utils/numberToWords';
 import { 
@@ -1050,253 +1051,26 @@ export function HrmsDashboard() {
       {/* Main Content Area */}
       <div className="flex-1 overflow-y-auto p-6">
         
-        {/* Tab 1: Staff Directory */}
+        {/* Tab 1: Staff Directory (Rich Grid, Table, Compact & Org Views) */}
         {activeTab === 'employees' && (
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <div>
-                <h2 className={`text-sm font-bold uppercase tracking-wider ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                  Store Employees & Access Roles ({employees.length})
-                </h2>
-                <p className="text-xs text-slate-400">
-                  Shop owner can add, edit salary packages, configure optional PF deduction, manage logins, and generate individual salary slips.
-                </p>
-              </div>
-              {isOwner && (
-                <button
-                  onClick={openOnboardModal}
-                  className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold shadow-lg shadow-purple-600/20 flex items-center space-x-1.5 transition-all"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Onboard New Employee</span>
-                </button>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {employees.map((emp) => {
-                const isActive = emp.status === 'ACTIVE';
-                const hasPf = Boolean(emp.is_pf_eligible);
-
-                return (
-                  <div key={emp.id} className={`p-4 rounded-2xl border shadow-md space-y-3 transition-all ${
-                    isDark 
-                      ? (isActive ? 'bg-slate-900 border-slate-800' : 'bg-slate-900/60 border-rose-900/40 opacity-80') 
-                      : (isActive ? 'bg-white border-slate-200 shadow-sm' : 'bg-slate-50 border-slate-300 opacity-80')
-                  }`}>
-                    <div className="flex justify-between items-start">
-                      <div className="flex items-start space-x-3">
-                        {/* Avatar / Passport Photo */}
-                        <div className="relative">
-                          {emp.photo_url ? (
-                            <img
-                              src={emp.photo_url}
-                              alt={emp.full_name}
-                              className="w-12 h-12 rounded-2xl object-cover border-2 border-purple-500/40 shadow-sm"
-                            />
-                          ) : (
-                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-sm border ${
-                              isActive
-                                ? 'bg-purple-500/20 text-purple-600 dark:text-purple-300 border-purple-500/40'
-                                : 'bg-slate-800 text-slate-400 border-slate-700'
-                            }`}>
-                              {emp.full_name ? emp.full_name.charAt(0).toUpperCase() : 'E'}
-                            </div>
-                          )}
-                        </div>
-
-                        <div>
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/30 font-bold">
-                              {emp.employee_code}
-                            </span>
-                            {hasPf && (
-                              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30">
-                                PF Active
-                              </span>
-                            )}
-                            {/* Document Count Pill */}
-                            <button
-                              onClick={() => openEmployeeDocsModal(emp)}
-                              className={`text-[9px] font-bold px-1.5 py-0.5 rounded border flex items-center space-x-1 transition-all hover:scale-105 ${
-                                Number(emp.documents_count) >= 4
-                                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
-                                  : Number(emp.documents_count) > 0
-                                    ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
-                                    : 'bg-slate-800/60 text-slate-400 border-slate-700'
-                              }`}
-                              title="Click to view and manage uploaded KYC documents"
-                            >
-                              <FileCheck className="w-2.5 h-2.5" />
-                              <span>{emp.documents_count || 0}/7 Docs</span>
-                            </button>
-                          </div>
-                          <h3 className={`text-sm font-bold mt-1 ${isDark ? 'text-white' : 'text-slate-900'}`}>{emp.full_name}</h3>
-                          <p className="text-xs text-slate-400">{emp.designation} • {emp.department || 'Sales'}</p>
-                        </div>
-                      </div>
-
-                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${
-                        isActive
-                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border-emerald-500/30'
-                          : 'bg-rose-500/10 text-rose-600 dark:text-rose-300 border-rose-500/30'
-                      }`}>
-                        {isActive ? 'ACTIVE' : 'DISABLED'}
-                      </span>
-                    </div>
-
-                    <div className={`text-xs space-y-1.5 pt-2 border-t font-mono ${
-                      isDark ? 'border-slate-800 text-slate-300' : 'border-slate-200 text-slate-700'
-                    }`}>
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Phone:</span>
-                        <span>{emp.phone}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Joining Date:</span>
-                        <span className="text-slate-300 font-sans">{emp.date_of_joining || 'Not set'}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Monthly Basic:</span>
-                        <span className="text-emerald-600 dark:text-emerald-400 font-bold">₹{emp.monthly_basic_salary?.toLocaleString('en-IN')}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-slate-400">Portal Access:</span>
-                        {emp.username ? (
-                          emp.login_is_active !== 0 ? (
-                            <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center space-x-1">
-                              <ShieldCheck className="w-3 h-3" />
-                              <span>@{emp.username} ({emp.role_name || 'Staff'})</span>
-                            </span>
-                          ) : (
-                            <span className="text-rose-500 font-bold flex items-center space-x-1">
-                              <ShieldAlert className="w-3 h-3" />
-                              <span>@{emp.username} (Revoked)</span>
-                            </span>
-                          )
-                        ) : (
-                          <span className="text-slate-400 italic">No System Login</span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Owner Action Buttons */}
-                    {isOwner && (
-                      <div className={`pt-3 border-t flex flex-wrap items-center justify-between gap-1.5 ${
-                        isDark ? 'border-slate-800' : 'border-slate-200'
-                      }`}>
-                        <div className="flex items-center space-x-1">
-                          {/* Edit Employee */}
-                          <button
-                            onClick={() => openEditEmployeeModal(emp)}
-                            className={`p-1.5 rounded-lg border text-xs font-semibold flex items-center space-x-1 transition-all ${
-                              isDark ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-sky-400' : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-sky-600'
-                            }`}
-                            title="Edit Employee Details & Salary Structure"
-                          >
-                            <Edit3 className="w-3.5 h-3.5" />
-                            <span className="text-[10px]">Edit</span>
-                          </button>
-
-                          {/* Documents Hub */}
-                          <button
-                            onClick={() => openEmployeeDocsModal(emp)}
-                            className={`p-1.5 rounded-lg border text-xs font-semibold flex items-center space-x-1 transition-all ${
-                              isDark ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-amber-400' : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-amber-600'
-                            }`}
-                            title="View / Upload Verification Documents (Aadhaar, PAN, Marksheets)"
-                          >
-                            <FileUp className="w-3.5 h-3.5" />
-                            <span className="text-[10px]">KYC Docs</span>
-                          </button>
-
-                          {/* Welcome / Onboarding Letter */}
-                          <button
-                            onClick={() => setSelectedOnboardingLetter(emp)}
-                            className={`p-1.5 rounded-lg border text-xs font-semibold flex items-center space-x-1 transition-all ${
-                              isDark ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-emerald-400' : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-emerald-600'
-                            }`}
-                            title="View & Print Official Welcome / Appointment Letter"
-                          >
-                            <Award className="w-3.5 h-3.5" />
-                            <span className="text-[10px]">Letter</span>
-                          </button>
-
-                          {/* Employee Photo ID Card */}
-                          <button
-                            onClick={() => setIdCardEmployee(emp)}
-                            className={`p-1.5 rounded-lg border text-xs font-semibold flex items-center space-x-1 transition-all ${
-                              isDark ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-purple-400' : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-purple-600'
-                            }`}
-                            title="Generate & Print Official Staff Photo ID Card Badge"
-                          >
-                            <CreditCard className="w-3.5 h-3.5" />
-                            <span className="text-[10px]">ID Card</span>
-                          </button>
-
-                          {/* Grant / Revoke Portal Access & Privileges */}
-                          <button
-                            onClick={() => openAccessModal(emp)}
-                            className={`p-1.5 rounded-lg border text-xs font-semibold flex items-center space-x-1 transition-all ${
-                              emp.username
-                                ? emp.login_is_active !== 0
-                                  ? 'bg-purple-500/10 hover:bg-purple-500/20 border-purple-500/30 text-purple-400'
-                                  : 'bg-rose-500/10 hover:bg-rose-500/20 border-rose-500/30 text-rose-500'
-                                : isDark ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-300' : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-700'
-                            }`}
-                            title="Configure System Login, Role & Grant/Revoke Portal Privileges"
-                          >
-                            <ShieldCheck className="w-3.5 h-3.5" />
-                            <span className="text-[10px]">{emp.username ? 'Access' : 'Grant Access'}</span>
-                          </button>
-
-                          {/* Enable/Disable Toggle */}
-                          <button
-                            onClick={() => handleToggleEmployeeStatus(emp)}
-                            className={`p-1.5 rounded-lg border text-xs font-semibold flex items-center space-x-1 transition-all ${
-                              isActive
-                                ? isDark ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-400' : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-600'
-                                : 'bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/30 text-emerald-500'
-                            }`}
-                            title={isActive ? "Disable Employee Login & Status" : "Enable Employee"}
-                          >
-                            <Power className="w-3.5 h-3.5" />
-                          </button>
-
-                          {/* Delete Employee */}
-                          {emp.role_id !== 1 && (
-                            <button
-                              onClick={() => handleDeleteEmployee(emp)}
-                              className="p-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 text-xs font-semibold transition-all"
-                              title="Delete / Remove Employee"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                        </div>
-
-                        {/* Process Salary / Pay Slip Quick Action */}
-                        <button
-                          onClick={() => {
-                            setActiveTab('payroll');
-                            const found = payrollSummary.find(s => s.employee_id === emp.id);
-                            if (found) {
-                              openProcessPayrollModal(found);
-                            }
-                          }}
-                          className="px-2.5 py-1 rounded-lg bg-purple-600/10 hover:bg-purple-600/20 border border-purple-500/30 text-purple-600 dark:text-purple-300 text-[10px] font-bold flex items-center space-x-1 transition-all ml-auto"
-                          title="Process Salary / Generate Pay Slip"
-                        >
-                          <FileText className="w-3 h-3" />
-                          <span>Process Salary</span>
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          <StaffDirectoryView
+            employees={employees}
+            isOwner={isOwner}
+            isDark={isDark}
+            activeShop={activeShop}
+            roles={roles}
+            payrollSummary={payrollSummary}
+            openOnboardModal={openOnboardModal}
+            openEditEmployeeModal={openEditEmployeeModal}
+            openEmployeeDocsModal={openEmployeeDocsModal}
+            setSelectedOnboardingLetter={setSelectedOnboardingLetter}
+            setIdCardEmployee={setIdCardEmployee}
+            openAccessModal={openAccessModal}
+            handleToggleEmployeeStatus={handleToggleEmployeeStatus}
+            handleDeleteEmployee={handleDeleteEmployee}
+            openProcessPayrollModal={openProcessPayrollModal}
+            setActiveTab={setActiveTab}
+          />
         )}
 
         {/* Tab 2: Attendance Register & Working Days */}

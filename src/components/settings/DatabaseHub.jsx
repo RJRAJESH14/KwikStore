@@ -18,7 +18,13 @@ import {
   Copy,
   Check,
   Sparkles,
-  Layers
+  Layers,
+  Cloud,
+  CloudUpload,
+  Clock,
+  ExternalLink,
+  History,
+  Key
 } from 'lucide-react';
 
 export function DatabaseHub() {
@@ -34,6 +40,20 @@ export function DatabaseHub() {
   const [message, setMessage] = useState(null);
   const [copied, setCopied] = useState(false);
 
+  // Google Drive Cloud Backup State
+  const [gdriveConfig, setGdriveConfig] = useState({
+    enabled: false,
+    accessToken: '',
+    folderName: 'KwikStore_Backups',
+    schedule: 'DAILY_2200',
+    customDailyTime: '22:00',
+    keepLastN: 15,
+    accountEmail: ''
+  });
+  const [gdriveLogs, setGdriveLogs] = useState([]);
+  const [gdriveLoading, setGdriveLoading] = useState(false);
+  const [showGdriveLogs, setShowGdriveLogs] = useState(false);
+
   // New Fresh DB Form State
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [freshDbPath, setFreshDbPath] = useState('D:\\KwikStoreData\\my_new_store.db');
@@ -46,6 +66,8 @@ export function DatabaseHub() {
 
   useEffect(() => {
     loadDatabaseStatus();
+    loadGdriveConfig();
+    loadGdriveLogs();
   }, []);
 
   const loadDatabaseStatus = async () => {
@@ -62,6 +84,107 @@ export function DatabaseHub() {
       }
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const loadGdriveConfig = async () => {
+    try {
+      const res = await fetch('/api/database/gdrive/config');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.config) {
+          setGdriveConfig(data.config);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load Google Drive config', e);
+    }
+  };
+
+  const loadGdriveLogs = async () => {
+    try {
+      const res = await fetch('/api/database/gdrive/logs?limit=10');
+      if (res.ok) {
+        const data = await res.json();
+        setGdriveLogs(data.logs || []);
+      }
+    } catch (e) {
+      console.error('Failed to load Google Drive logs', e);
+    }
+  };
+
+  const handleSaveGdriveConfig = async (e) => {
+    if (e) e.preventDefault();
+    setGdriveLoading(true);
+    try {
+      const res = await fetch('/api/database/gdrive/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(gdriveConfig)
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMessage({ type: 'success', text: '✅ Google Drive backup settings and schedule saved!' });
+        loadGdriveConfig();
+      } else {
+        setMessage({ type: 'error', text: data.message });
+      }
+    } catch (e) {
+      setMessage({ type: 'error', text: 'Failed to save Google Drive settings.' });
+    } finally {
+      setGdriveLoading(false);
+    }
+  };
+
+  const handleTestGdrive = async () => {
+    if (!gdriveConfig.accessToken) {
+      setMessage({ type: 'error', text: 'Please enter a Google Drive Access Token first.' });
+      return;
+    }
+    setGdriveLoading(true);
+    try {
+      const res = await fetch('/api/database/gdrive/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accessToken: gdriveConfig.accessToken })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMessage({ type: 'success', text: `✨ ${data.message}` });
+        loadGdriveConfig();
+      } else {
+        setMessage({ type: 'error', text: `❌ ${data.message}` });
+      }
+    } catch (e) {
+      setMessage({ type: 'error', text: 'Connection test failed. Check network or token.' });
+    } finally {
+      setGdriveLoading(false);
+    }
+  };
+
+  const handleGdriveBackupNow = async () => {
+    setGdriveLoading(true);
+    setMessage(null);
+    try {
+      const res = await fetch('/api/database/gdrive/backup-now', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMessage({ 
+          type: 'success', 
+          text: `☁️ Google Drive Backup Uploaded: ${data.fileName} (${data.sizeMb}) to folder "${data.folderName}"` 
+        });
+        loadGdriveLogs();
+        loadGdriveConfig();
+      } else {
+        setMessage({ type: 'error', text: data.message });
+      }
+    } catch (e) {
+      setMessage({ type: 'error', text: 'Failed to upload backup to Google Drive.' });
+    } finally {
+      setGdriveLoading(false);
     }
   };
 
@@ -449,6 +572,234 @@ export function DatabaseHub() {
               Migrate Database
             </button>
           </div>
+        </div>
+
+        {/* Card: Google Drive Cloud Backup & Sync Hub */}
+        <div className={`p-5 rounded-2xl border space-y-4 ${
+          isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+        }`}>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex items-center space-x-2 text-sky-500">
+              <Cloud className="w-5 h-5" />
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white">Google Drive Cloud Auto-Backup (Zero Setup / Custom Path)</h2>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 ${
+                gdriveConfig.enabled && gdriveConfig.accessToken
+                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                  : 'bg-slate-500/10 text-slate-500 border border-slate-500/20'
+              }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${gdriveConfig.enabled && gdriveConfig.accessToken ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}></span>
+                {gdriveConfig.enabled && gdriveConfig.accessToken ? (gdriveConfig.accountEmail ? `Connected: ${gdriveConfig.accountEmail}` : 'Cloud Sync Active') : 'Cloud Sync Disabled'}
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowGdriveLogs(!showGdriveLogs)}
+                className="px-2.5 py-1 text-xs rounded-lg border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-1"
+              >
+                <History className="w-3.5 h-3.5" />
+                {showGdriveLogs ? 'Hide Cloud Logs' : 'View Cloud Logs'}
+              </button>
+            </div>
+          </div>
+
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Securely upload automated daily/hourly encrypted database snapshots directly to your personal Google Drive or company folder.
+          </p>
+
+          <form onSubmit={handleSaveGdriveConfig} className="space-y-4 pt-1">
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-2 text-xs font-semibold cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={gdriveConfig.enabled}
+                  onChange={(e) => setGdriveConfig({ ...gdriveConfig, enabled: e.target.checked })}
+                  className="rounded border-slate-400 text-brand-600 focus:ring-brand-500 w-4 h-4"
+                />
+                <span className={isDark ? 'text-slate-200' : 'text-slate-800'}>Enable Google Drive Automated Cloud Backup</span>
+              </label>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold uppercase text-slate-400 mb-1 flex items-center gap-1">
+                  <Key className="w-3.5 h-3.5 text-sky-500" />
+                  Google OAuth / Access Token
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="password"
+                    value={gdriveConfig.accessToken}
+                    onChange={(e) => setGdriveConfig({ ...gdriveConfig, accessToken: e.target.value })}
+                    placeholder="Paste your Google Drive OAuth access token..."
+                    className={`flex-1 px-3 py-2 rounded-xl border text-xs font-mono focus:ring-2 focus:ring-sky-500 focus:outline-none ${
+                      isDark ? 'bg-slate-800 border-slate-700 text-slate-100' : 'bg-slate-50 border-slate-300 text-slate-900'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleTestGdrive}
+                    disabled={gdriveLoading || !gdriveConfig.accessToken}
+                    className="px-3 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold shrink-0 disabled:opacity-50"
+                  >
+                    Test Token
+                  </button>
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1">Generate via Google Cloud Console or OAuth Playground with <code>https://www.googleapis.com/auth/drive.file</code> scope.</p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase text-slate-400 mb-1 flex items-center gap-1">
+                  <FolderPlus className="w-3.5 h-3.5 text-emerald-500" />
+                  Google Drive Target Folder Name / Path
+                </label>
+                <input
+                  type="text"
+                  value={gdriveConfig.folderName}
+                  onChange={(e) => setGdriveConfig({ ...gdriveConfig, folderName: e.target.value })}
+                  placeholder="e.g. KwikStore_Backups"
+                  className={`w-full px-3 py-2 rounded-xl border text-xs font-mono focus:ring-2 focus:ring-emerald-500 focus:outline-none ${
+                    isDark ? 'bg-slate-800 border-slate-700 text-slate-100' : 'bg-slate-50 border-slate-300 text-slate-900'
+                  }`}
+                />
+                <p className="text-[10px] text-slate-400 mt-1">If this folder does not exist on your Google Drive, KwikStore creates it automatically.</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
+              <div>
+                <label className="block text-xs font-bold uppercase text-slate-400 mb-1 flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5 text-indigo-400" />
+                  Cloud Backup Frequency / Schedule
+                </label>
+                <select
+                  value={gdriveConfig.schedule}
+                  onChange={(e) => setGdriveConfig({ ...gdriveConfig, schedule: e.target.value })}
+                  className={`w-full px-3 py-2 rounded-xl border text-xs font-semibold ${
+                    isDark ? 'bg-slate-800 border-slate-700 text-slate-100' : 'bg-slate-50 border-slate-300 text-slate-900'
+                  }`}
+                >
+                  <option value="DAILY_2200">Custom Daily Time (Recommended)</option>
+                  <option value="HOURLY_1">Every 1 Hour</option>
+                  <option value="HOURLY_4">Every 4 Hours</option>
+                  <option value="ON_SHUTDOWN">On Application Close</option>
+                  <option value="MANUAL">Manual Trigger Only</option>
+                </select>
+              </div>
+
+              {gdriveConfig.schedule === 'DAILY_2200' && (
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-400 mb-1">
+                    Daily Backup Time (24h)
+                  </label>
+                  <input
+                    type="time"
+                    value={gdriveConfig.customDailyTime || '22:00'}
+                    onChange={(e) => setGdriveConfig({ ...gdriveConfig, customDailyTime: e.target.value })}
+                    className={`w-full px-3 py-2 rounded-xl border text-xs font-semibold ${
+                      isDark ? 'bg-slate-800 border-slate-700 text-slate-100' : 'bg-slate-50 border-slate-300 text-slate-900'
+                    }`}
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-bold uppercase text-slate-400 mb-1">
+                  Cloud Retention (Versions to Keep)
+                </label>
+                <select
+                  value={gdriveConfig.keepLastN || 15}
+                  onChange={(e) => setGdriveConfig({ ...gdriveConfig, keepLastN: Number(e.target.value) })}
+                  className={`w-full px-3 py-2 rounded-xl border text-xs font-semibold ${
+                    isDark ? 'bg-slate-800 border-slate-700 text-slate-100' : 'bg-slate-50 border-slate-300 text-slate-900'
+                  }`}
+                >
+                  <option value={7}>Keep last 7 backups</option>
+                  <option value={15}>Keep last 15 backups (Default)</option>
+                  <option value={30}>Keep last 30 backups</option>
+                  <option value={60}>Keep last 60 backups</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+              <div className="text-xs text-slate-400">
+                {gdriveConfig.lastBackupAt ? `Last cloud sync: ${gdriveConfig.lastBackupAt}` : 'No cloud backups uploaded yet.'}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="submit"
+                  disabled={gdriveLoading}
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 text-xs font-bold shadow-sm transition active:scale-95 disabled:opacity-50"
+                >
+                  Save Schedule Settings
+                </button>
+                <button
+                  type="button"
+                  onClick={handleGdriveBackupNow}
+                  disabled={gdriveLoading || !gdriveConfig.accessToken}
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white text-xs font-bold shadow-md flex items-center gap-1.5 transition active:scale-95 disabled:opacity-50"
+                >
+                  <CloudUpload className="w-4 h-4" />
+                  {gdriveLoading ? 'Uploading to Drive...' : 'Upload to Drive Now'}
+                </button>
+              </div>
+            </div>
+          </form>
+
+          {/* Cloud Audit Logs Accordion */}
+          {showGdriveLogs && (
+            <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-800 space-y-2">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-400">
+                <span>Recent Google Drive Upload History</span>
+                <button onClick={loadGdriveLogs} className="hover:text-slate-200 flex items-center gap-1 text-[11px]">
+                  <RefreshCw className="w-3 h-3" /> Refresh Logs
+                </button>
+              </div>
+              {gdriveLogs.length === 0 ? (
+                <div className="text-xs text-slate-500 py-3 text-center">No Google Drive uploads recorded yet.</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs font-mono">
+                    <thead>
+                      <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-400 text-[10px] uppercase">
+                        <th className="py-1.5 px-2">Date & Time</th>
+                        <th className="py-1.5 px-2">Backup File</th>
+                        <th className="py-1.5 px-2">Size</th>
+                        <th className="py-1.5 px-2">Trigger</th>
+                        <th className="py-1.5 px-2">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                      {gdriveLogs.map((log) => (
+                        <tr key={log.id} className="hover:bg-slate-500/5">
+                          <td className="py-1.5 px-2 text-slate-400">{log.created_at}</td>
+                          <td className="py-1.5 px-2 text-slate-200 font-semibold">{log.file_name}</td>
+                          <td className="py-1.5 px-2 text-slate-400">{log.file_size_mb} MB</td>
+                          <td className="py-1.5 px-2">
+                            <span className="px-1.5 py-0.5 rounded text-[10px] bg-slate-700 text-slate-300">
+                              {log.trigger_type}
+                            </span>
+                          </td>
+                          <td className="py-1.5 px-2">
+                            {log.status === 'SUCCESS' ? (
+                              <span className="text-emerald-500 font-bold flex items-center gap-1 text-[11px]">
+                                <CheckCircle2 className="w-3.5 h-3.5" /> Uploaded
+                              </span>
+                            ) : (
+                              <span className="text-rose-500 font-bold flex items-center gap-1 text-[11px]" title={log.error_message}>
+                                <AlertTriangle className="w-3.5 h-3.5" /> Failed
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Card: Restore Database from Backup */}

@@ -14,6 +14,9 @@ import * as shiftService from '../services/shiftService.js';
 import * as loyaltyService from '../services/loyaltyService.js';
 import * as creditNoteService from '../services/creditNoteService.js';
 import * as gstExportService from '../services/gstExportService.js';
+import * as googleDriveService from '../services/googleDriveService.js';
+import * as ewayBillService from '../services/ewayBillService.js';
+import * as stockTransferService from '../services/stockTransferService.js';
 import { getDb } from '../database/db.js';
 
 const router = express.Router();
@@ -392,6 +395,16 @@ router.post('/hrms/attendance/batch', (req, res) => {
   res.json(hrmsService.markBatchAttendance(req.body));
 });
 
+router.post('/hrms/attendance/kiosk-punch', (req, res) => {
+  try {
+    const { input, shopId } = req.body;
+    const result = hrmsService.kioskPunchAttendance(input, shopId);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
 router.get('/hrms/leaves', (req, res) => {
   res.json(hrmsService.getLeaves(req.query.shopId));
 });
@@ -547,6 +560,50 @@ router.post('/database/reset', async (req, res) => {
     const { wipeProducts } = req.body;
     const result = resetDatabaseTransactions({ wipeProducts: Boolean(wipeProducts) });
     res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// Google Drive Cloud Backup Endpoints
+router.get('/database/gdrive/config', (req, res) => {
+  try {
+    res.json({ success: true, config: googleDriveService.getGoogleDriveConfig() });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.post('/database/gdrive/config', (req, res) => {
+  try {
+    res.json(googleDriveService.saveGoogleDriveConfig(req.body));
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.post('/database/gdrive/test', async (req, res) => {
+  try {
+    const result = await googleDriveService.testGoogleDriveConnection(req.body.accessToken);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.post('/database/gdrive/backup-now', async (req, res) => {
+  try {
+    const result = await googleDriveService.uploadBackupToGoogleDrive(null, 'MANUAL');
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.get('/database/gdrive/logs', (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 15;
+    res.json({ success: true, logs: googleDriveService.getGoogleDriveLogs(limit) });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -748,6 +805,27 @@ router.get('/inventory/low-stock-reorder', (req, res) => {
   }
 });
 
+router.get('/inventory/alerts', (req, res) => {
+  try {
+    const shopId = req.query.shopId || 1;
+    const expiry = inventoryService.getExpiryAnalysis(shopId);
+    const lowStock = inventoryService.getLowStockAutoReorder(shopId);
+    const criticalOutOfStock = (lowStock.lowItems || []).filter(i => Number(i.current_stock) <= 0);
+    const lowStockItems = (lowStock.lowItems || []).filter(i => Number(i.current_stock) > 0);
+
+    res.json({
+      success: true,
+      totalAlerts: (criticalOutOfStock.length + lowStockItems.length + expiry.summary.expiredCount + expiry.summary.within30Count),
+      criticalOutOfStock,
+      lowStockItems,
+      supplierGroups: lowStock.supplierGroups || [],
+      expiry
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // 15. GST Export & Owner Day-End Business Summary
 router.get('/reports/gstr1', (req, res) => {
   try {
@@ -767,6 +845,66 @@ router.get('/reports/owner-summary', (req, res) => {
     res.json(result);
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// 16. Indian GST E-Way Bill & B2B E-Invoicing
+router.post('/ewaybill/generate-json', (req, res) => {
+  try {
+    const { invoiceId, transporterData } = req.body;
+    const result = ewayBillService.generateEWayBillJson(invoiceId, transporterData || {});
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.get('/einvoice/generate-json/:invoiceId', (req, res) => {
+  try {
+    const result = ewayBillService.generateEInvoiceJson(req.params.invoiceId);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// 17. Inter-Branch Stock Transfers & Delivery Challans (DC)
+router.get('/stock-transfers', (req, res) => {
+  try {
+    const { shopId, type } = req.query;
+    const transfers = stockTransferService.getStockTransfers(shopId ? Number(shopId) : null, type || 'ALL');
+    res.json({ success: true, transfers });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.post('/stock-transfers', (req, res) => {
+  try {
+    const result = stockTransferService.createStockTransfer(req.body);
+    res.json({ success: true, transfer: result, message: `Stock transfer ${result.transfer_number} dispatched successfully.` });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+router.get('/stock-transfers/:id', (req, res) => {
+  try {
+    const transfer = stockTransferService.getStockTransferById(req.params.id);
+    if (!transfer) return res.status(404).json({ success: false, message: 'Transfer not found.' });
+    res.json({ success: true, transfer });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.post('/stock-transfers/:id/receive', (req, res) => {
+  try {
+    const { userId } = req.body;
+    const updated = stockTransferService.receiveStockTransfer(req.params.id, userId);
+    res.json({ success: true, transfer: updated, message: `Stock transfer ${updated.transfer_number} marked as RECEIVED and inventory updated!` });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
   }
 });
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useShop } from '../../context/ShopContext';
 import { useTheme } from '../../context/ThemeContext';
+import { StockTransferModal } from './StockTransferModal';
 import { 
   Building2, 
   Plus, 
@@ -752,83 +753,14 @@ export function MultiShopManager() {
         </div>
       )}
 
-      {/* Inter Branch Transfer Modal */}
-      {isTransferOpen && (
-        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className={`border rounded-2xl w-full max-w-md shadow-2xl p-6 space-y-4 text-xs animate-in fade-in zoom-in-95 ${
-            isDark ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-800'
-          }`}>
-            <div className="flex justify-between items-center border-b pb-3 border-slate-700">
-              <h3 className={`text-sm font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>Record Inter-Branch Stock Transfer</h3>
-              <button onClick={() => setIsTransferOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-white font-bold">✕</button>
-            </div>
-
-            <form onSubmit={handleCreateTransfer} className="space-y-3">
-              <div>
-                <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>From Source Branch</label>
-                <select
-                  value={transferForm.from_shop_id}
-                  onChange={(e) => setTransferForm({ ...transferForm, from_shop_id: parseInt(e.target.value, 10) })}
-                  className={`w-full border rounded-lg p-2 outline-none ${
-                    isDark ? 'bg-slate-950 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
-                  }`}
-                >
-                  {shops.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
-              </div>
-
-              <div>
-                <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>To Destination Branch</label>
-                <select
-                  value={transferForm.to_shop_id}
-                  onChange={(e) => setTransferForm({ ...transferForm, to_shop_id: parseInt(e.target.value, 10) })}
-                  className={`w-full border rounded-lg p-2 outline-none ${
-                    isDark ? 'bg-slate-950 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
-                  }`}
-                >
-                  {shops.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Product</label>
-                  <input
-                    type="text"
-                    value={transferForm.product_name}
-                    onChange={(e) => setTransferForm({ ...transferForm, product_name: e.target.value })}
-                    className={`w-full border rounded-lg p-2 outline-none ${
-                      isDark ? 'bg-slate-950 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
-                    }`}
-                  />
-                </div>
-                <div>
-                  <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Quantity</label>
-                  <input
-                    type="number"
-                    value={transferForm.quantity}
-                    onChange={(e) => setTransferForm({ ...transferForm, quantity: parseFloat(e.target.value) || 1 })}
-                    className={`w-full border rounded-lg p-2 font-mono outline-none ${
-                      isDark ? 'bg-slate-950 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
-                    }`}
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end space-x-2 pt-2">
-                <button type="button" onClick={() => setIsTransferOpen(false)} className={`px-3 py-1.5 rounded-lg ${
-                  isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-200 text-slate-700'
-                }`}>
-                  Cancel
-                </button>
-                <button type="submit" className="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold shadow">
-                  Execute Stock Transfer
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Inter-Branch Stock Transfers & Delivery Challan Modal */}
+      <StockTransferModal
+        isOpen={isTransferOpen}
+        onClose={() => {
+          setIsTransferOpen(false);
+          loadTransfers();
+        }}
+      />
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { useShop } from '../../context/ShopContext';
 import { useTheme } from '../../context/ThemeContext';
 import { ExpiryTracker } from './ExpiryTracker';
 import { BarcodeLabelDesigner } from './BarcodeLabelDesigner';
+import { StockAlertsModal } from './StockAlertsModal';
 import { 
   Package, 
   Search, 
@@ -59,8 +60,8 @@ export function InventoryManager() {
   const [notification, setNotification] = useState(null);
   const [isQuickSupplierModalOpen, setIsQuickSupplierModalOpen] = useState(false);
   const [quickSupplierForm, setQuickSupplierForm] = useState({ name: '', phone: '', contact_person: '', gstin: '' });
-  const [savingQuickSupplier, setSavingQuickSupplier] = useState(false);
-  const [imageError, setImageError] = useState(null);
+  const [isAlertsModalOpen, setIsAlertsModalOpen] = useState(false);
+  const [alertsSummary, setAlertsSummary] = useState(null);
   const [activeInventoryTab, setActiveInventoryTab] = useState('catalog'); // catalog, expiry, barcode
   const [industryMode, setIndustryMode] = useState('auto'); // auto, garments, pharmacy, hardware, grocery, electronics, general, all
 
@@ -130,8 +131,21 @@ export function InventoryManager() {
       loadProducts();
       loadCategories();
       loadSuppliers();
+      loadAlertsSummary();
     }
   }, [activeShop, search]);
+
+  const loadAlertsSummary = async () => {
+    try {
+      const res = await fetch(`/api/inventory/alerts?shopId=${activeShop?.id || 1}`);
+      if (res.ok) {
+        const data = await res.json();
+        setAlertsSummary(data);
+      }
+    } catch (e) {
+      console.error('Failed to load alert summary', e);
+    }
+  };
 
   const loadProducts = async () => {
     setLoading(true);
@@ -434,6 +448,21 @@ export function InventoryManager() {
               );
             })}
           </div>
+
+          {/* Stock & Expiry Alerts Modal Trigger */}
+          <button
+            onClick={() => setIsAlertsModalOpen(true)}
+            className="px-3.5 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30 text-xs font-bold shadow-sm flex items-center space-x-1.5 transition-all"
+            title="View 0-Stock, Threshold Triggers & Expiry Batches"
+          >
+            <AlertTriangle className="w-4 h-4 text-rose-500" />
+            <span>Stock Alerts</span>
+            {alertsSummary?.totalAlerts > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full bg-rose-600 text-white text-[10px] font-black">
+                {alertsSummary.totalAlerts}
+              </span>
+            )}
+          </button>
 
           {/* Add Product Button (Owner & Authorized Staff only) */}
           {canEdit && (
@@ -1880,6 +1909,15 @@ export function InventoryManager() {
           </div>
         </div>
       )}
+
+      {/* Low Stock & Expiry Alert Center Modal */}
+      <StockAlertsModal
+        isOpen={isAlertsModalOpen}
+        onClose={() => {
+          setIsAlertsModalOpen(false);
+          loadAlertsSummary();
+        }}
+      />
     </div>
   );
 }

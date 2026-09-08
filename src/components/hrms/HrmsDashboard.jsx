@@ -7,6 +7,7 @@ import { OnboardingLetterPrint } from '../print/OnboardingLetterPrint';
 import { EmployeeIdCardModal } from './EmployeeIdCardModal';
 import { AttendanceAnalytics } from './AttendanceAnalytics';
 import { StaffDirectoryView } from './StaffDirectoryView';
+import { AttendanceKioskModal } from './AttendanceKioskModal';
 import { PORTAL_MODULES } from '../staff/StaffRbacManager';
 import { numberToIndianWords } from '../../utils/numberToWords';
 import { 
@@ -107,6 +108,7 @@ export function HrmsDashboard() {
   const [selectedSalarySlip, setSelectedSalarySlip] = useState(null);
   const [selectedOnboardingLetter, setSelectedOnboardingLetter] = useState(null);
   const [idCardEmployee, setIdCardEmployee] = useState(null);
+  const [showKioskModal, setShowKioskModal] = useState(false);
 
   // Employee Documents Hub & Preview Modal
   const [selectedDocEmployee, setSelectedDocEmployee] = useState(null);
@@ -1043,6 +1045,16 @@ export function HrmsDashboard() {
             );
           })}
         </div>
+
+        {/* Store Kiosk Punch Button */}
+        <button
+          onClick={() => setShowKioskModal(true)}
+          className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold shadow-md flex items-center space-x-1.5 active:scale-95 transition shrink-0"
+          title="Open Fullscreen Store Tablet / QR Kiosk Terminal for Staff"
+        >
+          <Clock className="w-3.5 h-3.5" />
+          <span>Kiosk Punch Terminal</span>
+        </button>
       </div>
 
       {/* Notification Banner */}
@@ -3641,6 +3653,13 @@ export function HrmsDashboard() {
         isOpen={Boolean(idCardEmployee)}
         onClose={() => setIdCardEmployee(null)}
         employee={idCardEmployee}
+      />
+
+      {/* Store Kiosk QR / PIN Punch Terminal Modal */}
+      <AttendanceKioskModal
+        isOpen={showKioskModal}
+        onClose={() => setShowKioskModal(false)}
+        onAttendanceRecorded={loadData}
       />
     </div>
   );

@@ -345,6 +345,128 @@ export function markBatchAttendance(data) {
   return { success: true, count: emps.length, message: `Marked attendance as ${status} for ${emps.length} staff members.` };
 }
 
+// 2.1 Store Kiosk QR / PIN Instant Touch Punch
+export function kioskPunchAttendance(inputRaw, shopId) {
+  const db = getDb();
+  let cleanInput = String(inputRaw || '').trim();
+
+  // Try parsing JSON if it was scanned from QR code
+  if (cleanInput.startsWith('{') && cleanInput.endsWith('}')) {
+    try {
+      const parsed = JSON.parse(cleanInput);
+      cleanInput = parsed.employee_code || parsed.code || parsed.id || cleanInput;
+    } catch (e) {}
+  }
+
+  // Find employee by code, ID, or phone
+  const emp = db.prepare(`
+    SELECT e.*, s.name as shop_name
+    FROM employees e
+    JOIN shops s ON e.shop_id = s.id
+    WHERE e.status = 'ACTIVE' 
+      AND (
+        e.employee_code = ? 
+        OR LOWER(e.employee_code) = LOWER(?)
+        OR e.id = ?
+        OR e.phone = ?
+      )
+    LIMIT 1
+  `).get(cleanInput, cleanInput, isNaN(cleanInput) ? -1 : Number(cleanInput), cleanInput);
+
+  if (!emp) {
+    throw new Error(`No active employee found matching code or PIN: "${cleanInput}"`);
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  const nowTimeStr = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const displayTime = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+
+  const existingAtt = db.prepare(`
+    SELECT * FROM attendance WHERE employee_id = ? AND date = ?
+  `).get(emp.id, today);
+
+  let action = 'CHECK_IN';
+  let totalHours = 8;
+  let responseMessage = '';
+
+  if (!existingAtt || !existingAtt.check_in_time) {
+    // Fresh Check In
+    db.prepare(`
+      INSERT INTO attendance (employee_id, shop_id, date, check_in_time, status, work_hours, notes)
+      VALUES (?, ?, ?, ?, 'PRESENT', 8, 'Kiosk Check-In')
+      ON CONFLICT(employee_id, date) DO UPDATE SET
+        check_in_time = excluded.check_in_time,
+        status = 'PRESENT',
+        notes = 'Kiosk Check-In'
+    `).run(emp.id, emp.shop_id, today, nowTimeStr);
+
+    action = 'CHECK_IN';
+    responseMessage = `Welcome, ${emp.full_name}! Check-in recorded at ${displayTime}. Have a great shift!`;
+  } else if (!existingAtt.check_out_time) {
+    // Check Out
+    let calculatedHours = 8;
+    try {
+      const [inH, inM] = existingAtt.check_in_time.split(':').map(Number);
+      const inDate = new Date();
+      inDate.setHours(inH, inM, 0);
+      const diffMs = now.getTime() - inDate.getTime();
+      calculatedHours = Math.max(0.5, Number((diffMs / (1000 * 60 * 60)).toFixed(2)));
+    } catch (e) {
+      calculatedHours = 8;
+    }
+
+    db.prepare(`
+      UPDATE attendance 
+      SET check_out_time = ?, work_hours = ?, notes = 'Kiosk Check-Out'
+      WHERE id = ?
+    `).run(nowTimeStr, calculatedHours, existingAtt.id);
+
+    action = 'CHECK_OUT';
+    totalHours = calculatedHours;
+    responseMessage = `Goodbye, ${emp.full_name}! Check-out recorded at ${displayTime}. Total Shift: ${calculatedHours} hrs.`;
+  } else {
+    // Already checked out, update latest checkout time
+    let calculatedHours = existingAtt.work_hours || 8;
+    try {
+      const [inH, inM] = existingAtt.check_in_time.split(':').map(Number);
+      const inDate = new Date();
+      inDate.setHours(inH, inM, 0);
+      const diffMs = now.getTime() - inDate.getTime();
+      calculatedHours = Math.max(0.5, Number((diffMs / (1000 * 60 * 60)).toFixed(2)));
+    } catch (e) {}
+
+    db.prepare(`
+      UPDATE attendance 
+      SET check_out_time = ?, work_hours = ?, notes = 'Kiosk Re-Punch Check-Out'
+      WHERE id = ?
+    `).run(nowTimeStr, calculatedHours, existingAtt.id);
+
+    action = 'CHECK_OUT_UPDATED';
+    totalHours = calculatedHours;
+    responseMessage = `Updated check-out for ${emp.full_name} at ${displayTime}. Total Shift: ${calculatedHours} hrs.`;
+  }
+
+  return {
+    success: true,
+    action,
+    message: responseMessage,
+    time: displayTime,
+    timestamp: nowTimeStr,
+    totalHours,
+    employee: {
+      id: emp.id,
+      code: emp.employee_code,
+      name: emp.full_name,
+      designation: emp.designation,
+      department: emp.department,
+      photo_url: emp.photo_url,
+      shop_name: emp.shop_name,
+      shift_timing: emp.shift_timing || '09:00 AM - 06:00 PM'
+    }
+  };
+}
+
 export function getAttendanceAnalytics(shopId, params = {}) {
   const db = getDb();
   const viewType = params.viewType || 'month'; // 'week', 'month', 'year'
@@ -937,9 +1059,20 @@ export function calculatePayroll(shopId, monthYear) {
       salesCommissionPay = Math.round(totalEmployeeSales * (commissionRate / 100));
     }
 
+    // Calculate overtime from attendance records where work_hours > 8
+    const otRow = db.prepare(`
+      SELECT SUM(CASE WHEN work_hours > 8 THEN (work_hours - 8) ELSE 0 END) as ot_hours
+      FROM attendance
+      WHERE employee_id = ? AND date LIKE ?
+    `).get(emp.id, `${targetMonth}-%`);
+    const overtimeHours = Number(otRow?.ot_hours || 0);
+    const hourlyRate = (monthlyBasic > 0 && totalDaysInMonth > 0) ? (monthlyBasic / (totalDaysInMonth * 8)) : (Number(emp.daily_wage || 0) / 8);
+    const otRatePerHour = Number(emp.overtime_rate_per_hour || Math.round(hourlyRate * 1.5) || 0);
+    const overtimePay = Math.round(overtimeHours * otRatePerHour);
+
     const hra = Number(emp.hra || 0);
     const allowances = Number(emp.special_allowance || 0);
-    const grossSalary = earnedBasic + hra + allowances + salesCommissionPay;
+    const grossSalary = earnedBasic + hra + allowances + overtimePay + salesCommissionPay;
 
     const advanceDeduction = Math.min(pendingAdvance, grossSalary);
 
@@ -975,9 +1108,9 @@ export function calculatePayroll(shopId, monthYear) {
       present_days: presentDays + (halfDays * 0.5),
       paid_leaves: paidLeaves,
       unpaid_leaves: unpaidLeaves,
-      overtime_hours: 0,
-      overtime_rate: emp.overtime_rate_per_hour || 0,
-      overtime_pay: 0,
+      overtime_hours: overtimeHours,
+      overtime_rate: otRatePerHour,
+      overtime_pay: overtimePay,
       monthly_basic: monthlyBasic,
       daily_wage: emp.daily_wage || Math.round(perDayRate),
       earned_basic: earnedBasic,

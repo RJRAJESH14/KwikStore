@@ -459,12 +459,49 @@ export function runMigrations() {
       total_amount REAL NOT NULL
     );
 
+    -- Inter-Branch Stock Transfers & Delivery Challans (Rule 55)
+    CREATE TABLE IF NOT EXISTS stock_transfers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      transfer_number TEXT UNIQUE NOT NULL,
+      from_shop_id INTEGER NOT NULL REFERENCES shops(id),
+      to_shop_id INTEGER NOT NULL REFERENCES shops(id),
+      status TEXT DEFAULT 'DISPATCHED', -- DRAFT, DISPATCHED, RECEIVED, CANCELLED
+      vehicle_no TEXT,
+      transporter_name TEXT,
+      driver_phone TEXT,
+      notes TEXT,
+      total_items INTEGER DEFAULT 0,
+      total_qty REAL DEFAULT 0,
+      total_value REAL DEFAULT 0,
+      dispatched_by INTEGER REFERENCES users(id),
+      received_by INTEGER REFERENCES users(id),
+      dispatched_at TEXT DEFAULT (datetime('now', 'localtime')),
+      received_at TEXT,
+      created_at TEXT DEFAULT (datetime('now', 'localtime'))
+    );
+
+    CREATE TABLE IF NOT EXISTS stock_transfer_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      transfer_id INTEGER NOT NULL REFERENCES stock_transfers(id) ON DELETE CASCADE,
+      product_id INTEGER NOT NULL,
+      product_name TEXT NOT NULL,
+      barcode TEXT,
+      hsn_code TEXT,
+      batch_no TEXT,
+      expiry_date TEXT,
+      quantity REAL NOT NULL,
+      unit TEXT DEFAULT 'PCS',
+      unit_cost REAL DEFAULT 0,
+      total_cost REAL DEFAULT 0
+    );
+
     -- Create Indexes for Super Fast Querying
     CREATE INDEX IF NOT EXISTS idx_products_barcode ON products(barcode);
     CREATE INDEX IF NOT EXISTS idx_products_shop ON products(shop_id);
     CREATE INDEX IF NOT EXISTS idx_invoices_shop_date ON invoices(shop_id, invoice_date);
     CREATE INDEX IF NOT EXISTS idx_quotations_shop_date ON quotations(shop_id, quotation_date);
     CREATE INDEX IF NOT EXISTS idx_attendance_emp_date ON attendance(employee_id, date);
+    CREATE INDEX IF NOT EXISTS idx_stock_transfers_shops ON stock_transfers(from_shop_id, to_shop_id);
   `);
 
   // Safe column additions

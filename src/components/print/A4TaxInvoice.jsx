@@ -5,13 +5,15 @@ import { numberToIndianWords } from '../../utils/numberToWords';
 import { formatCurrency } from '../../utils/gstUtils';
 import { BarcodeSvg } from '../common/BarcodeSvg';
 import { openWhatsAppInvoice, generateWhatsAppInvoiceText } from '../../utils/whatsappUtils';
-import { Printer, X, Download, FileText, Share2, Receipt, CheckCircle, ShieldCheck, Landmark, Building2, Phone, Mail, MapPin, Copy, Check } from 'lucide-react';
+import { Printer, X, Download, FileText, Share2, Receipt, CheckCircle, ShieldCheck, Landmark, Building2, Phone, Mail, MapPin, Copy, Check, Truck } from 'lucide-react';
+import { EWayBillModal } from '../pos/EWayBillModal';
 
 export function A4TaxInvoice({ invoice, onClose, onPrint, onSwitchToThermal }) {
   const { isDark } = useTheme();
   const [qrCodeUrl, setQrCodeUrl] = useState(null);
   const [copyType, setCopyType] = useState('ORIGINAL FOR RECIPIENT'); // ORIGINAL FOR RECIPIENT, DUPLICATE FOR TRANSPORTER, TRIPLICATE FOR SUPPLIER
   const [copiedBill, setCopiedBill] = useState(false);
+  const [showEWayModal, setShowEWayModal] = useState(false);
 
   useEffect(() => {
     if (!invoice) return;
@@ -222,6 +224,15 @@ export function A4TaxInvoice({ invoice, onClose, onPrint, onSwitchToThermal }) {
             >
               <Share2 className="w-3.5 h-3.5" />
               <span>WhatsApp</span>
+            </button>
+
+            <button
+              onClick={() => setShowEWayModal(true)}
+              className="px-2.5 py-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-semibold flex items-center space-x-1.5 transition-all"
+              title="Generate NIC E-Way Bill & E-Invoice JSON"
+            >
+              <Truck className="w-3.5 h-3.5" />
+              <span>E-Way Bill</span>
             </button>
 
             <button
@@ -617,6 +628,13 @@ export function A4TaxInvoice({ invoice, onClose, onPrint, onSwitchToThermal }) {
           </div>
         </div>
       </div>
+
+      {showEWayModal && (
+        <EWayBillModal
+          invoice={invoice}
+          onClose={() => setShowEWayModal(false)}
+        />
+      )}
     </div>
   );
 }

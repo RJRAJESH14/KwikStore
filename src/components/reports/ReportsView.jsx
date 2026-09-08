@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { A4TaxInvoice } from '../print/A4TaxInvoice';
 import { ThermalReceipt } from '../print/ThermalReceipt';
 import { OwnerSummaryModal } from './OwnerSummaryModal';
+import { EWayBillModal } from '../pos/EWayBillModal';
 import { 
   BarChart3, 
   TrendingUp, 
@@ -31,7 +32,8 @@ import {
   ArrowUpRight,
   ShieldCheck,
   UserCheck,
-  Sparkles
+  Sparkles,
+  Truck
 } from 'lucide-react';
 
 export function ReportsView() {
@@ -71,6 +73,7 @@ export function ReportsView() {
   const [printFormat, setPrintFormat] = useState('A4'); // 'A4' or 'THERMAL'
   const [isPrintSummaryModalOpen, setIsPrintSummaryModalOpen] = useState(false);
   const [isOwnerSummaryOpen, setIsOwnerSummaryOpen] = useState(false);
+  const [ewayBillInvoice, setEwayBillInvoice] = useState(null);
 
   // Helper to format ISO date to YYYY-MM-DD
   const formatDateToYMD = (date) => {
@@ -1275,22 +1278,41 @@ export function ReportsView() {
 
                         {/* Action buttons */}
                         <td className="py-3 px-4 text-center">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handleViewInvoice(inv.id);
-                            }}
-                            className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
-                              isDark 
-                                ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-cyan-400 hover:text-cyan-300' 
-                                : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-cyan-600 hover:text-cyan-700'
-                            }`}
-                            title="View & Print GST Invoice"
-                          >
-                            <Eye className="w-3.5 h-3.5 pointer-events-none" />
-                          </button>
+                          <div className="flex items-center justify-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleViewInvoice(inv.id);
+                              }}
+                              className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
+                                isDark 
+                                  ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-cyan-400 hover:text-cyan-300' 
+                                  : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-cyan-600 hover:text-cyan-700'
+                              }`}
+                              title="View & Print GST Invoice"
+                            >
+                              <Eye className="w-3.5 h-3.5 pointer-events-none" />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setEwayBillInvoice(inv);
+                              }}
+                              className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
+                                isDark 
+                                  ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-amber-400 hover:text-amber-300' 
+                                  : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-amber-600 hover:text-amber-700'
+                              }`}
+                              title="Generate NIC E-Way Bill & E-Invoice JSON"
+                            >
+                              <Truck className="w-3.5 h-3.5 pointer-events-none" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -1727,6 +1749,14 @@ export function ReportsView() {
         isOpen={isOwnerSummaryOpen}
         onClose={() => setIsOwnerSummaryOpen(false)}
       />
+
+      {/* E-Way Bill & E-Invoice Generator Modal */}
+      {ewayBillInvoice && (
+        <EWayBillModal
+          invoice={ewayBillInvoice}
+          onClose={() => setEwayBillInvoice(null)}
+        />
+      )}
     </div>
   );
 }

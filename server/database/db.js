@@ -89,6 +89,7 @@ export function getDb() {
   dbInstance.pragma('journal_mode = WAL');
   dbInstance.pragma('foreign_keys = ON');
   dbInstance.pragma('synchronous = NORMAL');
+  dbInstance.pragma('busy_timeout = 5000'); // 5-second wait on concurrent LAN counter writes
   dbInstance.pragma('cache_size = -64000'); // 64MB cache
 
   return dbInstance;

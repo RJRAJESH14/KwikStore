@@ -242,6 +242,113 @@ html.dark ::-webkit-scrollbar-thumb:hover {
   @apply bg-slate-900 border border-slate-800 shadow-lg rounded-xl text-slate-100;
 }
 
+/* ============================================================
+   DOCUMENT PREVIEW & PRINT ENGINES (A4, Thermal, Statements)
+   Always preserve crisp paper contrast in Dark & Light Modes
+   ============================================================ */
+#printable-a4-invoice,
+#printable-thermal-receipt,
+#printable-salary-slip,
+#printable-attendance-report,
+#printable-customer-statement,
+#printable-onboarding-letter,
+#printable-delivery-challan,
+#printable-owner-summary,
+#printable-sales-summary,
+#printable-transit-slip,
+#printable-eway-bills-registry,
+.printable-document {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+/* Prevent dark-mode table cell whitening inside document previews */
+html.dark #printable-a4-invoice td,
+html.dark #printable-thermal-receipt td,
+html.dark #printable-salary-slip td,
+html.dark #printable-attendance-report td,
+html.dark #printable-customer-statement td,
+html.dark #printable-onboarding-letter td,
+html.dark #printable-delivery-challan td,
+html.dark #printable-owner-summary td,
+html.dark #printable-sales-summary td,
+html.dark #printable-transit-slip td,
+html.dark #printable-eway-bills-registry td,
+html.dark .printable-document td {
+  color: #1e293b !important;
+}
+
+/* Prevent dark-mode table header alterations inside document previews */
+html.dark #printable-a4-invoice th,
+html.dark #printable-thermal-receipt th,
+html.dark #printable-salary-slip th,
+html.dark #printable-attendance-report th,
+html.dark #printable-customer-statement th,
+html.dark #printable-onboarding-letter th,
+html.dark #printable-delivery-challan th,
+html.dark #printable-owner-summary th,
+html.dark #printable-sales-summary th,
+html.dark #printable-transit-slip th,
+html.dark #printable-eway-bills-registry th,
+html.dark .printable-document th {
+  color: #0f172a !important;
+}
+
+/* Retain dark header contrast for invoice table header */
+#printable-a4-invoice thead tr th,
+html.dark #printable-a4-invoice thead tr th,
+#printable-a4-invoice thead th.text-white,
+html.dark #printable-a4-invoice thead th.text-white {
+  color: #ffffff !important;
+}
+
+/* Force dark typography for headings and paragraphs inside printable documents */
+html.dark #printable-a4-invoice h1,
+html.dark #printable-a4-invoice h2,
+html.dark #printable-a4-invoice h3,
+html.dark #printable-a4-invoice h4,
+html.dark #printable-salary-slip h1,
+html.dark #printable-customer-statement h1,
+html.dark #printable-delivery-challan h1,
+html.dark .printable-document h1 {
+  color: #0f172a !important;
+}
+
+html.dark #printable-a4-invoice .text-slate-900,
+html.dark #printable-thermal-receipt .text-slate-900,
+html.dark #printable-salary-slip .text-slate-900,
+html.dark .printable-document .text-slate-900 {
+  color: #0f172a !important;
+}
+
+html.dark #printable-a4-invoice .text-slate-800,
+html.dark #printable-thermal-receipt .text-slate-800,
+html.dark #printable-salary-slip .text-slate-800,
+html.dark .printable-document .text-slate-800 {
+  color: #1e293b !important;
+}
+
+html.dark #printable-a4-invoice .text-slate-700,
+html.dark #printable-thermal-receipt .text-slate-700,
+html.dark #printable-salary-slip .text-slate-700,
+html.dark .printable-document .text-slate-700 {
+  color: #334155 !important;
+}
+
+html.dark #printable-a4-invoice .text-slate-600,
+html.dark #printable-thermal-receipt .text-slate-600,
+html.dark #printable-salary-slip .text-slate-600,
+html.dark .printable-document .text-slate-600 {
+  color: #475569 !important;
+}
+
+html.dark #printable-a4-invoice .text-slate-500,
+html.dark #printable-thermal-receipt .text-slate-500,
+html.dark #printable-salary-slip .text-slate-500,
+html.dark .printable-document .text-slate-500 {
+  color: #64748b !important;
+}
+
 /* Dedicated Print Styles for 80mm Thermal & A4 Tax Invoices, Payroll, Statements & Reports */
 @media print {
   body * {

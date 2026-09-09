@@ -402,60 +402,60 @@ export function A4TaxInvoice({ invoice, onClose, onPrint, onSwitchToThermal }) {
                     <th className="py-2.5 px-2.5 text-right w-24">Amount (₹)</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-200 text-slate-800">
+                <tbody className="divide-y divide-slate-200 text-slate-900">
                   {(invoice.items && invoice.items.length > 0) ? (
                     invoice.items.map((item, idx) => (
                       <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/70'}>
-                        <td className="py-2 px-2.5 text-slate-500 text-left font-mono">{idx + 1}</td>
+                        <td className="py-2 px-2.5 text-slate-700 text-left font-mono font-bold">{idx + 1}</td>
                         <td className="py-2 px-2.5">
-                          <div className="font-bold text-slate-900">{item.item_name || 'Product Item'}</div>
-                          <div className="text-[10px] text-slate-500 flex flex-wrap gap-2 mt-0.5">
+                          <div className="font-black text-slate-950">{item.item_name || 'Product Item'}</div>
+                          <div className="text-[10px] text-slate-600 flex flex-wrap gap-2 mt-0.5">
                             {(item.barcode || item.product_barcode) && (
-                              <span>Barcode: <strong className="font-mono text-slate-700">{item.barcode || item.product_barcode}</strong></span>
+                              <span>Barcode: <strong className="font-mono text-slate-800">{item.barcode || item.product_barcode}</strong></span>
                             )}
                             {item.batch_no && (
-                              <span className="bg-purple-50 text-purple-700 px-1 rounded border border-purple-200">
+                              <span className="bg-purple-50 text-purple-800 px-1 rounded border border-purple-200 font-semibold">
                                 Batch: <strong>{item.batch_no}</strong> {item.expiry_date ? `(Exp: ${item.expiry_date})` : ''}
                               </span>
                             )}
                             {item.serial_imei && (
-                              <span className="bg-sky-50 text-sky-700 px-1 rounded border border-sky-200">
+                              <span className="bg-sky-50 text-sky-800 px-1 rounded border border-sky-200 font-semibold">
                                 SN/IMEI: <strong>{item.serial_imei}</strong>
                               </span>
                             )}
                             {item.variant_details && (
-                              <span>Variant: <strong>{item.variant_details}</strong></span>
+                              <span>Variant: <strong className="text-slate-800">{item.variant_details}</strong></span>
                             )}
                           </div>
                         </td>
-                        <td className="py-2 px-2 text-center font-mono text-[11px] text-slate-600">{item.hsn_code || '1905'}</td>
-                        <td className="py-2 px-2 text-center font-bold">
-                          {item.quantity || 1} <span className="text-[10px] text-slate-500 font-normal">{item.unit || 'PCS'}</span>
+                        <td className="py-2 px-2 text-center font-mono text-[11px] font-bold text-slate-800">{item.hsn_code || '1905'}</td>
+                        <td className="py-2 px-2 text-center font-bold text-slate-900">
+                          {item.quantity || 1} <span className="text-[10px] text-slate-600 font-semibold">{item.unit || 'PCS'}</span>
                           {item.free_quantity > 0 && (
-                            <span className="block text-[9px] text-emerald-700 font-bold bg-emerald-50 rounded px-1 mt-0.5">
+                            <span className="block text-[9px] text-emerald-800 font-bold bg-emerald-50 rounded px-1 mt-0.5 border border-emerald-200">
                               +{item.free_quantity} FREE
                             </span>
                           )}
                         </td>
-                        <td className="py-2 px-2 text-right font-mono font-medium">₹{Number(item.unit_price || 0).toFixed(2)}</td>
-                        <td className="py-2 px-2 text-center font-mono font-semibold text-slate-700">{item.tax_rate || 0}%</td>
-                        <td className="py-2 px-2 text-right font-mono">₹{Number(item.taxable_value || (item.quantity * item.unit_price) || 0).toFixed(2)}</td>
-                        <td className="py-2 px-2.5 text-right font-bold text-slate-900 font-mono">₹{Number(item.total_amount || (item.quantity * item.unit_price) || 0).toFixed(2)}</td>
+                        <td className="py-2 px-2 text-right font-mono font-bold text-slate-900">₹{Number(item.unit_price || 0).toFixed(2)}</td>
+                        <td className="py-2 px-2 text-center font-mono font-bold text-slate-800">{item.tax_rate || 0}%</td>
+                        <td className="py-2 px-2 text-right font-mono font-bold text-slate-900">₹{Number(item.taxable_value || (item.quantity * item.unit_price) || 0).toFixed(2)}</td>
+                        <td className="py-2 px-2.5 text-right font-black text-slate-950 font-mono">₹{Number(item.total_amount || (item.quantity * item.unit_price) || 0).toFixed(2)}</td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td className="py-2.5 px-2.5 text-slate-500 text-left font-mono">1</td>
+                      <td className="py-2.5 px-2.5 text-slate-700 text-left font-mono font-bold">1</td>
                       <td className="py-2.5 px-2.5">
-                        <div className="font-bold text-slate-900">Retail Sales Items (Consolidated)</div>
-                        <div className="text-[10px] text-slate-400">Invoice #{invoice.invoice_number}</div>
+                        <div className="font-black text-slate-950">Retail Sales Items (Consolidated)</div>
+                        <div className="text-[10px] text-slate-600 font-medium">Invoice #{invoice.invoice_number}</div>
                       </td>
-                      <td className="py-2.5 px-2 text-center font-mono text-[11px] text-slate-600">1905</td>
-                      <td className="py-2.5 px-2 text-center font-bold">1 LOT</td>
-                      <td className="py-2.5 px-2 text-right font-mono">₹{Number(invoice.taxable_amount || invoice.grand_total || 0).toFixed(2)}</td>
-                      <td className="py-2.5 px-2 text-center font-mono">GST</td>
-                      <td className="py-2.5 px-2 text-right font-mono">₹{Number(invoice.taxable_amount || 0).toFixed(2)}</td>
-                      <td className="py-2.5 px-2.5 text-right font-bold text-slate-900 font-mono">₹{Number(invoice.grand_total || 0).toFixed(2)}</td>
+                      <td className="py-2.5 px-2 text-center font-mono text-[11px] font-bold text-slate-800">1905</td>
+                      <td className="py-2.5 px-2 text-center font-bold text-slate-900">1 LOT</td>
+                      <td className="py-2.5 px-2 text-right font-mono font-bold text-slate-900">₹{Number(invoice.taxable_amount || invoice.grand_total || 0).toFixed(2)}</td>
+                      <td className="py-2.5 px-2 text-center font-mono font-bold text-slate-800">GST</td>
+                      <td className="py-2.5 px-2 text-right font-mono font-bold text-slate-900">₹{Number(invoice.taxable_amount || 0).toFixed(2)}</td>
+                      <td className="py-2.5 px-2.5 text-right font-black text-slate-950 font-mono">₹{Number(invoice.grand_total || 0).toFixed(2)}</td>
                     </tr>
                   )}
                 </tbody>
@@ -464,30 +464,30 @@ export function A4TaxInvoice({ invoice, onClose, onPrint, onSwitchToThermal }) {
 
             {/* HSN Summary Tax Matrix (Official GST Requirement) */}
             {hsnSummary.length > 0 && (
-              <div className="border border-slate-200 rounded-lg overflow-hidden">
-                <div className="bg-slate-100 px-3 py-1 text-[10px] font-bold text-slate-700 border-b border-slate-200 uppercase tracking-wider">
+              <div className="border border-slate-300 rounded-lg overflow-hidden">
+                <div className="bg-slate-100 px-3 py-1.5 text-[10px] font-black text-slate-800 border-b border-slate-300 uppercase tracking-wider">
                   HSN/SAC Tax Breakdown Summary
                 </div>
                 <table className="w-full text-[10px] border-collapse">
                   <thead>
-                    <tr className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
-                      <th className="py-1 px-2 text-left">HSN/SAC</th>
-                      <th className="py-1 px-2 text-right">Taxable Val (₹)</th>
-                      <th className="py-1 px-2 text-right">CGST (₹)</th>
-                      <th className="py-1 px-2 text-right">SGST (₹)</th>
-                      <th className="py-1 px-2 text-right">IGST (₹)</th>
-                      <th className="py-1 px-2 text-right">Total Tax (₹)</th>
+                    <tr className="bg-slate-50 text-slate-800 font-bold border-b border-slate-200">
+                      <th className="py-1.5 px-2 text-left text-slate-800 font-bold">HSN/SAC</th>
+                      <th className="py-1.5 px-2 text-right text-slate-800 font-bold">Taxable Val (₹)</th>
+                      <th className="py-1.5 px-2 text-right text-slate-800 font-bold">CGST (₹)</th>
+                      <th className="py-1.5 px-2 text-right text-slate-800 font-bold">SGST (₹)</th>
+                      <th className="py-1.5 px-2 text-right text-slate-800 font-bold">IGST (₹)</th>
+                      <th className="py-1.5 px-2 text-right text-slate-800 font-bold">Total Tax (₹)</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 font-mono">
+                  <tbody className="divide-y divide-slate-200 font-mono">
                     {hsnSummary.map((h, i) => (
-                      <tr key={i} className="text-slate-700">
-                        <td className="py-1 px-2 text-left font-bold">{h.hsn} ({h.taxRate}%)</td>
-                        <td className="py-1 px-2 text-right">₹{h.taxableValue.toFixed(2)}</td>
-                        <td className="py-1 px-2 text-right">₹{h.cgstAmount.toFixed(2)}</td>
-                        <td className="py-1 px-2 text-right">₹{h.sgstAmount.toFixed(2)}</td>
-                        <td className="py-1 px-2 text-right">₹{h.igstAmount.toFixed(2)}</td>
-                        <td className="py-1 px-2 text-right font-bold text-slate-900">₹{h.totalTax.toFixed(2)}</td>
+                      <tr key={i} className="text-slate-900">
+                        <td className="py-1 px-2 text-left font-bold text-slate-900">{h.hsn} ({h.taxRate}%)</td>
+                        <td className="py-1 px-2 text-right font-bold text-slate-900">₹{h.taxableValue.toFixed(2)}</td>
+                        <td className="py-1 px-2 text-right font-bold text-slate-900">₹{h.cgstAmount.toFixed(2)}</td>
+                        <td className="py-1 px-2 text-right font-bold text-slate-900">₹{h.sgstAmount.toFixed(2)}</td>
+                        <td className="py-1 px-2 text-right font-bold text-slate-900">₹{h.igstAmount.toFixed(2)}</td>
+                        <td className="py-1 px-2 text-right font-black text-slate-950">₹{h.totalTax.toFixed(2)}</td>
                       </tr>
                     ))}
                   </tbody>

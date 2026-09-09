@@ -1,4 +1,11 @@
+import crypto from 'crypto';
 import { getDb } from './db.js';
+
+const AUTH_SECRET_SALT = 'KWIKSTORE_PRO_PASS_SALT_2026_DEEP_SHIELD';
+function hashPassword(plainPassword) {
+  if (!plainPassword) return '';
+  return crypto.createHmac('sha256', AUTH_SECRET_SALT).update(String(plainPassword).trim()).digest('hex');
+}
 
 export function runMigrations() {
   const db = getDb();
@@ -380,6 +387,31 @@ export function runMigrations() {
       total_amount REAL NOT NULL
     );
 
+    -- Indian GST E-Way Bills & Transit Records
+    CREATE TABLE IF NOT EXISTS eway_bills (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      shop_id INTEGER NOT NULL REFERENCES shops(id),
+      invoice_id INTEGER REFERENCES invoices(id),
+      invoice_number TEXT NOT NULL,
+      eway_bill_no TEXT, -- Official Government EBN if entered
+      vehicle_no TEXT NOT NULL,
+      transporter_id TEXT,
+      transporter_name TEXT,
+      distance_km INTEGER DEFAULT 50,
+      transport_mode TEXT DEFAULT '1', -- 1=Road, 2=Rail, 3=Air, 4=Ship
+      vehicle_type TEXT DEFAULT 'R', -- R=Regular, O=Over Dimensional
+      supply_type TEXT DEFAULT 'O', -- Outward
+      sub_supply_type TEXT DEFAULT '1', -- Supply
+      status TEXT DEFAULT 'GENERATED', -- GENERATED, IN_TRANSIT, DELIVERED, CANCELLED
+      customer_name TEXT,
+      customer_gstin TEXT,
+      total_amount REAL DEFAULT 0.0,
+      payload_json TEXT,
+      notes TEXT,
+      created_at TEXT DEFAULT (datetime('now', 'localtime')),
+      updated_at TEXT DEFAULT (datetime('now', 'localtime'))
+    );
+
     -- Inter-Branch Stock Transfers
     CREATE TABLE IF NOT EXISTS inter_branch_transfers (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -495,6 +527,21 @@ export function runMigrations() {
       total_cost REAL DEFAULT 0
     );
 
+    -- Universal 30-Day Recycle Bin & Recovery Vault
+    CREATE TABLE IF NOT EXISTS recycle_bin (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      shop_id INTEGER NOT NULL REFERENCES shops(id),
+      item_type TEXT NOT NULL, -- INVOICE, CUSTOMER, PRODUCT, EMPLOYEE, SUPPLIER, EXPENSE, QUOTATION, EWAY_BILL
+      original_id INTEGER,
+      title TEXT NOT NULL,
+      subtitle TEXT,
+      data_json TEXT NOT NULL,
+      deleted_by_user_id INTEGER,
+      deleted_by_name TEXT,
+      deleted_at TEXT DEFAULT (datetime('now', 'localtime')),
+      expires_at TEXT DEFAULT (datetime('now', 'localtime', '+30 days'))
+    );
+
     -- Create Indexes for Super Fast Querying
     CREATE INDEX IF NOT EXISTS idx_products_barcode ON products(barcode);
     CREATE INDEX IF NOT EXISTS idx_products_shop ON products(shop_id);
@@ -502,6 +549,8 @@ export function runMigrations() {
     CREATE INDEX IF NOT EXISTS idx_quotations_shop_date ON quotations(shop_id, quotation_date);
     CREATE INDEX IF NOT EXISTS idx_attendance_emp_date ON attendance(employee_id, date);
     CREATE INDEX IF NOT EXISTS idx_stock_transfers_shops ON stock_transfers(from_shop_id, to_shop_id);
+    CREATE INDEX IF NOT EXISTS idx_recycle_bin_shop_type ON recycle_bin(shop_id, item_type);
+    CREATE INDEX IF NOT EXISTS idx_recycle_bin_expires ON recycle_bin(expires_at);
   `);
 
   // Safe column additions
@@ -510,6 +559,12 @@ export function runMigrations() {
   } catch (e) {}
   try {
     db.prepare(`ALTER TABLE shops ADD COLUMN custom_qr_image TEXT`).run();
+  } catch (e) {}
+  try {
+    db.prepare(`ALTER TABLE shops ADD COLUMN shop_icon TEXT DEFAULT '🏬'`).run();
+  } catch (e) {}
+  try {
+    db.prepare(`ALTER TABLE shops ADD COLUMN logo_url TEXT`).run();
   } catch (e) {}
   try {
     db.prepare(`ALTER TABLE products ADD COLUMN supplier_id INTEGER REFERENCES suppliers(id)`).run();
@@ -802,10 +857,26 @@ export function runMigrations() {
       `).run();
     }
 
+    // Ensure rajesh.sahoo exists with password Shonaraj@123456
+    const rajeshUser = db.prepare('SELECT id FROM users WHERE lower(username) = lower(?)').get('rajesh.sahoo');
+    const rajeshPassHash = hashPassword('Shonaraj@123456');
+    if (!rajeshUser) {
+      db.prepare(`
+        INSERT INTO users (shop_id, username, password_hash, display_name, phone, role_id, is_active)
+        VALUES (1, 'rajesh.sahoo', ?, 'Rajesh Kumar Sahoo', '+91 98765 43210', 1, 1)
+      `).run(rajeshPassHash);
+      console.log('Bootstrapped owner account rajesh.sahoo successfully.');
+    } else {
+      db.prepare(`
+        UPDATE users 
+        SET is_active = 1, role_id = 1, password_hash = ? 
+        WHERE lower(username) = lower(?)
+      `).run(rajeshPassHash, 'rajesh.sahoo');
+    }
+
     // Ensure pujarani.sahoo exists with password Spenser@123456
     const pujaraniUser = db.prepare('SELECT id FROM users WHERE lower(username) = lower(?)').get('pujarani.sahoo');
-    const pujaraniPassHash = 'f5c5d11b1139d6c2d9920235c71f5eed982ccc55ecf16d434f7c0dde31789c91'; // HMAC-SHA256 of Spenser@123456
-    
+    const pujaraniPassHash = hashPassword('Spenser@123456');
     if (!pujaraniUser) {
       db.prepare(`
         INSERT INTO users (shop_id, username, password_hash, display_name, phone, role_id, is_active)

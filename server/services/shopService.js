@@ -19,7 +19,7 @@ export function createOrUpdateShop(shopData) {
           address = ?, city = ?, state = ?, state_code = ?, pincode = ?,
           upi_id = ?, upi_name = ?, bank_name = ?, bank_account_no = ?, bank_ifsc = ?,
           invoice_prefix = ?, thermal_footer_note = ?, terms_conditions = ?,
-          qr_type = ?, custom_qr_image = ?
+          qr_type = ?, custom_qr_image = ?, shop_icon = ?, logo_url = ?
       WHERE id = ?
     `).run(
       shopData.name, shopData.legal_name || null, shopData.shop_type || 'GENERAL_RETAIL',
@@ -31,6 +31,7 @@ export function createOrUpdateShop(shopData) {
       shopData.invoice_prefix || 'INV', shopData.thermal_footer_note || null,
       shopData.terms_conditions || null,
       shopData.qr_type || 'DYNAMIC', shopData.custom_qr_image || null,
+      shopData.shop_icon || '🏬', shopData.logo_url || null,
       shopData.id
     );
     return { success: true, message: 'Shop branch details updated successfully.' };
@@ -39,8 +40,8 @@ export function createOrUpdateShop(shopData) {
       INSERT INTO shops (
         name, legal_name, shop_type, gstin, drug_license_no, phone, email, address, city, state, state_code,
         pincode, upi_id, upi_name, bank_name, bank_account_no, bank_ifsc, invoice_prefix,
-        thermal_footer_note, terms_conditions, qr_type, custom_qr_image
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        thermal_footer_note, terms_conditions, qr_type, custom_qr_image, shop_icon, logo_url
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       shopData.name, shopData.legal_name || null, shopData.shop_type || 'GENERAL_RETAIL',
       shopData.gstin || null, shopData.drug_license_no || null, shopData.phone, shopData.email || null,
@@ -52,7 +53,9 @@ export function createOrUpdateShop(shopData) {
       shopData.thermal_footer_note || 'Thank you for shopping with us!',
       shopData.terms_conditions || 'Goods once sold cannot be returned without bill.',
       shopData.qr_type || 'DYNAMIC',
-      shopData.custom_qr_image || null
+      shopData.custom_qr_image || null,
+      shopData.shop_icon || '🏬',
+      shopData.logo_url || null
     );
     return { success: true, id: info.lastInsertRowid, message: 'New branch created successfully.' };
   }
@@ -94,17 +97,46 @@ export function createBranchTransfer(data) {
   return { success: true, transfer_number: transferNumber, message: 'Inter-branch stock transfer recorded.' };
 }
 
-export function deleteShop(shopId) {
+export function cleanDemoData(options = {}) {
   const db = getDb();
-  const activeCount = db.prepare(`SELECT COUNT(*) as count FROM shops WHERE is_active = 1`).get().count;
-  if (activeCount <= 1) {
-    throw new Error('Cannot delete the only remaining shop branch.');
-  }
-  
-  const shop = db.prepare(`SELECT * FROM shops WHERE id = ?`).get(shopId);
-  if (!shop) throw new Error('Shop branch not found.');
+  const tx = db.transaction(() => {
+    // 1. Clear Invoices & Sales
+    db.prepare(`DELETE FROM invoice_items`).run();
+    db.prepare(`DELETE FROM invoices`).run();
+    db.prepare(`DELETE FROM eway_bills`).run();
+    db.prepare(`DELETE FROM quotations`).run();
+    db.prepare(`DELETE FROM quotation_items`).run();
+    db.prepare(`DELETE FROM credit_notes`).run();
+    db.prepare(`DELETE FROM customer_ledger`).run();
+    db.prepare(`DELETE FROM expenses`).run();
+    db.prepare(`DELETE FROM inter_branch_transfers`).run();
+    db.prepare(`DELETE FROM shifts`).run();
+    
+    // Reset customer balances to opening balance or 0
+    db.prepare(`UPDATE customers SET current_balance = opening_balance`).run();
 
-  // Soft-delete or hard delete if no critical foreign keys
-  db.prepare(`UPDATE shops SET is_active = 0 WHERE id = ?`).run(shopId);
-  return { success: true, message: `Shop branch "${shop.name}" has been removed successfully.` };
+    // Reset stock transaction history if clear inventory requested
+    if (options.clearInventory) {
+      db.prepare(`DELETE FROM product_batches`).run();
+      db.prepare(`DELETE FROM product_serials`).run();
+      db.prepare(`DELETE FROM products`).run();
+    } else {
+      // Reset product stock to 0 for fresh stock inward
+      db.prepare(`UPDATE products SET current_stock = 0`).run();
+    }
+
+    if (options.clearCustomers) {
+      db.prepare(`DELETE FROM customers`).run();
+    }
+    
+    if (options.clearHrms) {
+      db.prepare(`DELETE FROM attendance_logs`).run();
+      db.prepare(`DELETE FROM payroll_records`).run();
+      db.prepare(`DELETE FROM employee_documents`).run();
+    }
+  });
+
+  tx();
+  return { success: true, message: 'All demo sales, invoices, and test transactions cleared successfully for a fresh store start!' };
 }
+

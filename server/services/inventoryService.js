@@ -154,18 +154,51 @@ export function createOrUpdateProduct(prodData) {
   }
 }
 
-export function deleteProduct(productId) {
+import { moveToRecycleBin } from './recycleBinService.js';
+
+export function deleteProduct(productId, user = null) {
   const db = getDb();
+  const product = db.prepare('SELECT * FROM products WHERE id = ?').get(productId);
+  if (!product) {
+    throw new Error('Product not found');
+  }
+
+  // Fetch product batches, serials, variants
+  const batches = db.prepare('SELECT * FROM product_batches WHERE product_id = ?').all(productId);
+  const serials = db.prepare('SELECT * FROM product_serials WHERE product_id = ?').all(productId);
+
+  // Archive to Recycle Bin (30-day retention)
+  try {
+    moveToRecycleBin({
+      shopId: product.shop_id || 1,
+      itemType: 'PRODUCT',
+      originalId: product.id,
+      title: `Product: ${product.name}`,
+      subtitle: `Barcode: ${product.barcode || 'N/A'} • Stock: ${product.stock_quantity || 0} ${product.unit || 'PCS'} • Selling: ₹${product.selling_price || product.retail_rate || 0}`,
+      data: {
+        product,
+        batches,
+        serials
+      },
+      userId: user?.id || null,
+      userName: user?.displayName || user?.username || 'Store Admin'
+    });
+  } catch (archiveErr) {
+    console.warn('Failed to archive product to recycle bin:', archiveErr.message);
+  }
+
   // Check if product is referenced in invoice items
   const count = db.prepare('SELECT COUNT(*) as count FROM invoice_items WHERE product_id = ?').get(productId);
   if (count && count.count > 0) {
     // Soft delete to preserve past sales audit trail
     db.prepare('UPDATE products SET is_active = 0 WHERE id = ?').run(productId);
-    return { success: true, message: 'Product archived and removed from active inventory (sales history preserved).' };
+    return { success: true, message: 'Product moved to Recycle Bin (sales history preserved).' };
   } else {
-    // Safe to permanently delete
+    // Delete product record (safely archived in recycle bin)
+    db.prepare('DELETE FROM product_batches WHERE product_id = ?').run(productId);
+    db.prepare('DELETE FROM product_serials WHERE product_id = ?').run(productId);
     db.prepare('DELETE FROM products WHERE id = ?').run(productId);
-    return { success: true, message: 'Product removed permanently from inventory.' };
+    return { success: true, message: 'Product moved to Recycle Bin (retained for 30 days).' };
   }
 }
 

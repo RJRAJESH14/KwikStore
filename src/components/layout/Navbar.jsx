@@ -4,6 +4,7 @@ import { useShop } from '../../context/ShopContext';
 import { useNetwork } from '../../context/NetworkContext';
 import { useTheme } from '../../context/ThemeContext';
 import { HelpModal } from '../help/HelpModal';
+import { HardwareDiagnosticsModal } from '../hardware/HardwareDiagnosticsModal';
 import { 
   Store, 
   User, 
@@ -23,14 +24,22 @@ import {
   RefreshCw,
   BookOpen,
   Info,
-  ChevronDown
+  ChevronDown,
+  Printer,
+  Barcode,
+  Cpu,
+  Monitor
 } from 'lucide-react';
 
 export function Navbar({ onOpenDatabaseHub, onOpenShopSettings, onOpenLoginModal, isSidebarCollapsed, onToggleSidebar }) {
   const { user, logout } = useAuth();
   const { shops, activeShop, switchShop } = useShop();
-  const { lanMode, isOnline } = useNetwork();
+  const { lanMode, isOnline, pingLatency, selectedReceiptPrinter, scannerStatus } = useNetwork();
   const { theme, toggleTheme, isDark } = useTheme();
+
+  // Hardware Modal State
+  const [isHardwareOpen, setIsHardwareOpen] = useState(false);
+  const [hardwareInitialTab, setHardwareInitialTab] = useState('lan');
 
   // Help Modal & Dropdown States
   const [isHelpOpen, setIsHelpOpen] = useState(false);
@@ -82,10 +91,8 @@ export function Navbar({ onOpenDatabaseHub, onOpenShopSettings, onOpenLoginModal
               <span className={`font-bold text-lg tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>KwikStore</span>
               <span className="text-xs font-semibold px-1.5 py-0.5 rounded bg-brand-500/20 text-brand-600 dark:text-brand-400 border border-brand-500/30">PRO</span>
             </div>
-            <div className={`text-[11px] flex items-center gap-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              <span>Universal POS & HRMS</span>
-              <span>•</span>
-              <span className="text-emerald-500 font-medium">100% Offline SQLite</span>
+            <div className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+              Universal POS & HRMS
             </div>
           </div>
         </div>
@@ -181,6 +188,22 @@ export function Navbar({ onOpenDatabaseHub, onOpenShopSettings, onOpenLoginModal
         >
           <HardDrive className="w-4 h-4 text-sky-500 dark:text-sky-400" />
           <span className="hidden sm:inline">DB Hub</span>
+        </button>
+
+        {/* Customer Facing Display (CFD) Secondary Screen */}
+        <button
+          onClick={() => {
+            window.open('/customer-display', 'KwikStoreCustomerDisplay', 'width=1024,height=768,menubar=no,toolbar=no,location=no');
+          }}
+          className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors ${
+            isDark
+              ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-purple-300'
+              : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-purple-700'
+          }`}
+          title="Open Customer Facing Display (CFD) on Secondary Screen / Tablet"
+        >
+          <Monitor className="w-4 h-4 text-purple-400" />
+          <span className="hidden sm:inline">CFD Screen</span>
         </button>
 
         {/* Help, Support & Updates Dropdown Menu */}
@@ -289,15 +312,42 @@ export function Navbar({ onOpenDatabaseHub, onOpenShopSettings, onOpenLoginModal
           )}
         </div>
 
-        {/* LAN Multi-Counter Status */}
-        <div className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg border text-xs ${
-          isDark
-            ? 'bg-slate-800/80 border-slate-700/60 text-slate-300'
-            : 'bg-slate-100 border-slate-300 text-slate-700'
-        }`}>
-          <Wifi className={`w-3.5 h-3.5 ${isOnline ? 'text-emerald-500' : 'text-amber-500'}`} />
-          <span className="hidden sm:inline">{lanMode === 'SERVER' ? 'Host Server' : 'Counter (LAN)'}</span>
-        </div>
+        {/* Hardware & LAN Multi-Counter Status Hub Pill */}
+        <button
+          onClick={() => {
+            setHardwareInitialTab('lan');
+            setIsHardwareOpen(true);
+          }}
+          className={`flex items-center space-x-2 px-2.5 py-1.5 rounded-lg border text-xs transition-all ${
+            isDark
+              ? 'bg-slate-800/90 hover:bg-slate-800 border-slate-700 text-slate-200'
+              : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800 shadow-sm'
+          }`}
+          title="Hardware Hub: Multi-Counter LAN, Thermal POS Printers & Barcode Scanners"
+        >
+          <div className="flex items-center space-x-1.5">
+            <Wifi className={`w-3.5 h-3.5 ${isOnline ? 'text-emerald-500' : 'text-rose-500'}`} />
+            <span className="font-semibold hidden sm:inline">
+              {lanMode === 'SERVER' ? 'Master Host' : 'Counter'}
+            </span>
+          </div>
+
+          <span className="text-slate-500 hidden md:inline">•</span>
+
+          <div className="hidden md:flex items-center space-x-1 text-[11px] text-cyan-500 font-medium">
+            <Printer className="w-3 h-3" />
+            <span className="max-w-[75px] truncate">
+              {selectedReceiptPrinter ? selectedReceiptPrinter.split(' ')[0] : 'Print'}
+            </span>
+          </div>
+
+          <span className="text-slate-500 hidden lg:inline">•</span>
+
+          <div className="hidden lg:flex items-center space-x-1 text-[11px] text-amber-500 font-medium">
+            <Barcode className="w-3 h-3" />
+            <span>Scan</span>
+          </div>
+        </button>
 
         {/* Staff User Profile / Login */}
         {user ? (
@@ -340,6 +390,13 @@ export function Navbar({ onOpenDatabaseHub, onOpenShopSettings, onOpenLoginModal
         isOpen={isHelpOpen}
         onClose={() => setIsHelpOpen(false)}
         initialTab={helpInitialTab}
+      />
+
+      {/* Hardware & LAN Multi-Counter Hub Modal */}
+      <HardwareDiagnosticsModal
+        isOpen={isHardwareOpen}
+        onClose={() => setIsHardwareOpen(false)}
+        initialTab={hardwareInitialTab}
       />
     </header>
   );

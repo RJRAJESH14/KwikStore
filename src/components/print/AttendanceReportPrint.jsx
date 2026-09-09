@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTheme } from '../../context/ThemeContext';
 import { Printer, X, Download, Share2, Building2, User, Calendar, Clock, CheckCircle2, AlertCircle, FileSpreadsheet } from 'lucide-react';
+import { exportElementToPdf } from '../../utils/pdfExport';
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -121,39 +122,19 @@ export function AttendanceReportPrint({
     window.open(url, '_blank');
   };
 
-  const handleDownloadHtml = () => {
-    const element = document.getElementById('printable-attendance-report');
-    if (!element) return;
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
-    const htmlContent = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>Attendance Report - ${periodTitle}</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    @media print {
-      @page { size: A4 portrait; margin: 8mm; }
-      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; font-family: system-ui, sans-serif; }
+  const handleDownloadPdf = async () => {
+    try {
+      setIsGeneratingPdf(true);
+      const filename = `Attendance_${viewType}_${selectedEmployeeId}_${periodTitle.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+      await exportElementToPdf('printable-attendance-report', filename, { scale: 2, margin: 6 });
+    } catch (err) {
+      console.error('Failed to export PDF:', err);
+      alert('Could not export PDF directly. Please use Print / Save PDF.');
+    } finally {
+      setIsGeneratingPdf(false);
     }
-  </style>
-</head>
-<body class="bg-white p-6 font-sans text-slate-900">
-  ${element.innerHTML}
-  <script>
-    window.onload = function() { window.print(); }
-  </script>
-</body>
-</html>`;
-
-    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `Attendance_${viewType}_${selectedEmployeeId}_${periodTitle.replace(/[^a-zA-Z0-9]/g, '_')}.html`;
-    link.click();
-    URL.revokeObjectURL(url);
   };
 
   return (
@@ -186,18 +167,23 @@ export function AttendanceReportPrint({
               className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-all active:scale-95"
             >
               <Printer className="w-4 h-4" />
-              Print / Save PDF
+              Print
             </button>
             <button
-              onClick={handleDownloadHtml}
+              onClick={handleDownloadPdf}
+              disabled={isGeneratingPdf}
               className={`flex items-center gap-1.5 px-3 py-2 border rounded-xl text-sm font-semibold transition-all ${
                 isDark 
                   ? 'border-slate-700 hover:bg-slate-700 text-slate-200' 
                   : 'border-slate-300 hover:bg-slate-200 text-slate-700'
-              }`}
+              } ${isGeneratingPdf ? 'opacity-70 cursor-wait' : ''}`}
             >
-              <Download className="w-4 h-4" />
-              HTML
+              {isGeneratingPdf ? (
+                <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Download className="w-4 h-4 text-emerald-500" />
+              )}
+              <span>{isGeneratingPdf ? 'Saving PDF...' : 'Download PDF'}</span>
             </button>
             <button
               onClick={handleShareWhatsApp}

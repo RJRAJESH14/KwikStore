@@ -321,7 +321,8 @@ export function getRecentInvoices(options = {}) {
   let limit = typeof options === 'object' ? (parseInt(options.limit, 10) || 500) : (arguments[1] || 50);
   
   let query = `
-    SELECT i.*, s.name as shop_name, u.display_name as cashier_name
+    SELECT i.*, s.name as shop_name, u.display_name as cashier_name,
+           (SELECT COUNT(*) FROM invoice_items ii WHERE ii.invoice_id = i.id) as items_count
     FROM invoices i
     JOIN shops s ON i.shop_id = s.id
     LEFT JOIN users u ON i.cashier_user_id = u.id
@@ -335,6 +336,10 @@ export function getRecentInvoices(options = {}) {
   }
 
   if (typeof options === 'object') {
+    if (options.customerId) {
+      query += ` AND i.customer_id = ?`;
+      params.push(options.customerId);
+    }
     if (options.startDate) {
       query += ` AND date(i.invoice_date) >= date(?)`;
       params.push(options.startDate);
@@ -359,9 +364,9 @@ export function getRecentInvoices(options = {}) {
       query += ` AND i.cashier_user_id = ?`;
       params.push(options.cashierUserId);
     }
-    if (options.search) {
+    if (options.search && options.search.trim()) {
       query += ` AND (i.invoice_number LIKE ? OR i.customer_name LIKE ? OR i.customer_phone LIKE ? OR i.customer_gstin LIKE ?)`;
-      const term = `%${options.search}%`;
+      const term = `%${options.search.trim()}%`;
       params.push(term, term, term, term);
     }
     if (options.minAmount) {
@@ -376,6 +381,124 @@ export function getRecentInvoices(options = {}) {
 
   query += ` ORDER BY i.id DESC LIMIT ?`;
   params.push(limit);
+
+  return db.prepare(query).all(...params);
+}
+
+// Update existing invoice details (Customer info, Payment mode/status, Remarks)
+export function updateInvoice(invoiceId, updateData, user = null) {
+  const db = getDb();
+  const currentInvoice = db.prepare(`SELECT * FROM invoices WHERE id = ?`).get(invoiceId);
+  if (!currentInvoice) {
+    throw new Error('Invoice not found');
+  }
+
+  const {
+    customer_name,
+    customer_phone,
+    customer_gstin,
+    customer_state_code,
+    billing_address,
+    invoice_type,
+    invoice_date,
+    payment_mode,
+    payment_status,
+    amount_paid,
+    balance_due,
+    notes
+  } = updateData;
+
+  const newPaid = amount_paid !== undefined ? parseFloat(amount_paid) : currentInvoice.amount_paid;
+  const newBalance = balance_due !== undefined ? parseFloat(balance_due) : (currentInvoice.grand_total - newPaid);
+  const newStatus = payment_status || (newBalance <= 0.01 ? 'PAID' : (newPaid > 0 ? 'PARTIAL' : 'UNPAID'));
+
+  const tx = db.transaction(() => {
+    db.prepare(`
+      UPDATE invoices
+      SET customer_name = COALESCE(?, customer_name),
+          customer_phone = COALESCE(?, customer_phone),
+          customer_gstin = COALESCE(?, customer_gstin),
+          customer_state_code = COALESCE(?, customer_state_code),
+          billing_address = COALESCE(?, billing_address),
+          invoice_type = COALESCE(?, invoice_type),
+          invoice_date = COALESCE(?, invoice_date),
+          payment_mode = COALESCE(?, payment_mode),
+          payment_status = ?,
+          amount_paid = ?,
+          balance_due = ?,
+          notes = COALESCE(?, notes)
+      WHERE id = ?
+    `).run(
+      customer_name !== undefined ? customer_name : null,
+      customer_phone !== undefined ? customer_phone : null,
+      customer_gstin !== undefined ? customer_gstin : null,
+      customer_state_code !== undefined ? customer_state_code : null,
+      billing_address !== undefined ? billing_address : null,
+      invoice_type !== undefined ? invoice_type : null,
+      invoice_date !== undefined ? invoice_date : null,
+      payment_mode !== undefined ? payment_mode : null,
+      newStatus,
+      newPaid,
+      newBalance,
+      notes !== undefined ? notes : null,
+      invoiceId
+    );
+
+    // If customer balance changed for a registered customer
+    if (currentInvoice.customer_id && (newBalance !== currentInvoice.balance_due)) {
+      const diff = newBalance - currentInvoice.balance_due;
+      db.prepare(`UPDATE customers SET current_balance = current_balance + ? WHERE id = ?`).run(diff, currentInvoice.customer_id);
+    }
+  });
+
+  tx();
+
+  return getInvoiceById(invoiceId);
+}
+
+// Grouped Customer-Wise Invoice Overview
+export function getCustomerWiseInvoices(shopId, options = {}) {
+  const db = getDb();
+  let query = `
+    SELECT 
+      COALESCE(i.customer_id, 0) as customer_id,
+      COALESCE(NULLIF(i.customer_name, ''), 'Walk-in Customer') as customer_name,
+      COALESCE(NULLIF(i.customer_phone, ''), 'N/A') as customer_phone,
+      i.customer_gstin,
+      COUNT(i.id) as total_invoices,
+      SUM(i.grand_total) as total_sales,
+      SUM(i.amount_paid) as total_paid,
+      SUM(i.balance_due) as total_balance_due,
+      MAX(i.invoice_date) as last_invoice_date,
+      (
+        SELECT sub.invoice_number 
+        FROM invoices sub 
+        WHERE (sub.customer_id = i.customer_id AND i.customer_id > 0)
+           OR (sub.customer_phone = i.customer_phone AND i.customer_phone != 'N/A')
+           OR (sub.customer_name = i.customer_name)
+        ORDER BY sub.id DESC LIMIT 1
+      ) as last_invoice_number
+    FROM invoices i
+    WHERE i.shop_id = ?
+  `;
+  const params = [shopId || 1];
+
+  if (options.startDate) {
+    query += ` AND date(i.invoice_date) >= date(?)`;
+    params.push(options.startDate);
+  }
+  if (options.endDate) {
+    query += ` AND date(i.invoice_date) <= date(?)`;
+    params.push(options.endDate);
+  }
+  if (options.search && options.search.trim()) {
+    query += ` AND (i.customer_name LIKE ? OR i.customer_phone LIKE ? OR i.customer_gstin LIKE ?)`;
+    const term = `%${options.search.trim()}%`;
+    params.push(term, term, term);
+  }
+
+  query += ` GROUP BY CASE WHEN i.customer_id > 0 THEN i.customer_id ELSE COALESCE(NULLIF(i.customer_phone, ''), i.customer_name) END`;
+  query += ` ORDER BY total_sales DESC`;
 
   return db.prepare(query).all(...params);
 }
@@ -466,5 +589,50 @@ export function getProfitAndLossReport(shopId, startDate, endDate) {
       marginPercent
     },
     items: itemProfits
+  };
+}
+
+import { moveToRecycleBin } from './recycleBinService.js';
+
+export function deleteInvoice(invoiceId, user = null) {
+  const db = getDb();
+  const invoice = db.prepare(`SELECT * FROM invoices WHERE id = ?`).get(invoiceId);
+  if (!invoice) {
+    throw new Error('Invoice not found');
+  }
+
+  const items = db.prepare(`SELECT * FROM invoice_items WHERE invoice_id = ?`).all(invoiceId);
+
+  // Archive full invoice + items to Recycle Bin
+  try {
+    moveToRecycleBin({
+      shopId: invoice.shop_id || 1,
+      itemType: 'INVOICE',
+      originalId: invoice.id,
+      title: `Invoice #${invoice.invoice_number} - ₹${(invoice.grand_total || 0).toLocaleString('en-IN')}`,
+      subtitle: `Customer: ${invoice.customer_name || 'Walk-in'} (${invoice.customer_phone || 'No phone'}) • ${items.length} items • ${invoice.payment_mode}`,
+      data: {
+        invoice,
+        items
+      },
+      userId: user?.id || null,
+      userName: user?.displayName || user?.username || 'Store Admin'
+    });
+  } catch (archiveErr) {
+    console.warn('Failed to archive invoice to recycle bin:', archiveErr.message);
+  }
+
+  const tx = db.transaction(() => {
+    // Delete invoice items
+    db.prepare(`DELETE FROM invoice_items WHERE invoice_id = ?`).run(invoiceId);
+    // Delete invoice
+    db.prepare(`DELETE FROM invoices WHERE id = ?`).run(invoiceId);
+  });
+
+  tx();
+
+  return {
+    success: true,
+    message: `Invoice #${invoice.invoice_number} moved to Recycle Bin (retained for 30 days).`
   };
 }

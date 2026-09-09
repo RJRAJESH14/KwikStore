@@ -190,38 +190,125 @@ export function recordCustomerPayment(data) {
 
 export function createOrUpdateCustomer(custData) {
   const db = getDb();
+  const shopId = custData.shop_id || 1;
+  const creditLimit = parseFloat(custData.credit_limit) !== undefined && !isNaN(parseFloat(custData.credit_limit))
+    ? parseFloat(custData.credit_limit)
+    : 25000;
+
   if (custData.id) {
     db.prepare(`
       UPDATE customers
       SET shop_id = ?, name = ?, phone = ?, email = ?, address = ?, gstin = ?,
-          state_code = ?, credit_limit = ?, route_beat = ?, customer_type = ?
+          state_code = ?, credit_limit = ?, route_beat = ?, customer_type = ?,
+          loyalty_points = COALESCE(?, loyalty_points), points_earned_total = COALESCE(?, points_earned_total),
+          dob = ?, anniversary_date = ?
       WHERE id = ?
     `).run(
-      custData.shop_id, custData.name, custData.phone, custData.email || null,
+      shopId, custData.name, custData.phone, custData.email || null,
       custData.address || null, custData.gstin || null, custData.state_code || '07',
-      custData.credit_limit || 25000, custData.route_beat || null, custData.customer_type || 'RETAIL',
+      creditLimit, custData.route_beat || null, custData.customer_type || 'RETAIL',
+      custData.loyalty_points !== undefined ? parseFloat(custData.loyalty_points) : null,
+      custData.points_earned_total !== undefined ? parseFloat(custData.points_earned_total) : null,
+      custData.dob || null, custData.anniversary_date || null,
       custData.id
     );
     return { success: true, message: 'Customer updated successfully.' };
   } else {
+    const initialBalance = parseFloat(custData.current_balance) || parseFloat(custData.opening_balance) || 0;
+    const loyaltyPoints = parseFloat(custData.loyalty_points) || 0;
+    const pointsEarnedTotal = parseFloat(custData.points_earned_total) || 0;
+
     const info = db.prepare(`
-      INSERT INTO customers (shop_id, name, phone, email, address, gstin, state_code, credit_limit, current_balance, route_beat, customer_type)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO customers (
+        shop_id, name, phone, email, address, gstin, state_code, credit_limit,
+        current_balance, route_beat, customer_type, loyalty_points, points_earned_total,
+        dob, anniversary_date
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
-      custData.shop_id, custData.name, custData.phone, custData.email || null,
+      shopId, custData.name, custData.phone, custData.email || null,
       custData.address || null, custData.gstin || null, custData.state_code || '07',
-      custData.credit_limit || 25000, custData.opening_balance || 0,
-      custData.route_beat || null, custData.customer_type || 'RETAIL'
+      creditLimit, initialBalance,
+      custData.route_beat || null, custData.customer_type || 'RETAIL',
+      loyaltyPoints, pointsEarnedTotal,
+      custData.dob || null, custData.anniversary_date || null
     );
 
     const custId = info.lastInsertRowid;
-    if (custData.opening_balance && custData.opening_balance > 0) {
+    if (initialBalance > 0) {
       db.prepare(`
         INSERT INTO customer_ledger (customer_id, shop_id, transaction_type, reference_no, debit_amount, credit_amount, balance_after, notes)
         VALUES (?, ?, 'OPENING_BALANCE', 'OB-INITIAL', ?, 0, ?, 'Opening Balance on Creation')
-      `).run(custId, custData.shop_id, custData.opening_balance, custData.opening_balance);
+      `).run(custId, shopId, initialBalance, initialBalance);
     }
 
     return { success: true, id: custId, message: 'Customer added successfully.' };
   }
+}
+
+import { moveToRecycleBin } from './recycleBinService.js';
+
+export function deleteCustomer(customerId, user = null) {
+  const db = getDb();
+  const customer = db.prepare(`SELECT * FROM customers WHERE id = ?`).get(customerId);
+  if (!customer) {
+    throw new Error('Customer not found');
+  }
+
+  // Fetch full ledger history before deletion to save complete snapshot
+  const ledgerHistory = db.prepare(`SELECT * FROM customer_ledger WHERE customer_id = ?`).all(customerId);
+
+  // Archive to Recycle Bin (30-day retention with 1-click restore)
+  try {
+    moveToRecycleBin({
+      shopId: customer.shop_id || 1,
+      itemType: 'CUSTOMER',
+      originalId: customer.id,
+      title: `Customer: ${customer.name}`,
+      subtitle: `Phone: ${customer.phone || 'N/A'} • Balance: ₹${(customer.current_balance || 0).toLocaleString('en-IN')}`,
+      data: {
+        customer,
+        ledger: ledgerHistory
+      },
+      userId: user?.id || null,
+      userName: user?.displayName || user?.username || 'Store Admin'
+    });
+  } catch (archiveErr) {
+    console.warn('Failed to archive customer to recycle bin:', archiveErr.message);
+  }
+
+  // Count associated invoices
+  const invoiceCount = db.prepare(`SELECT COUNT(*) as count FROM invoices WHERE customer_id = ?`).get(customerId).count;
+
+  const tx = db.transaction(() => {
+    // 1. Unlink invoices
+    db.prepare(`UPDATE invoices SET customer_id = NULL WHERE customer_id = ?`).run(customerId);
+
+    // 2. Unlink quotations
+    try {
+      db.prepare(`UPDATE quotations SET customer_id = NULL WHERE customer_id = ?`).run(customerId);
+    } catch (e) {}
+
+    // 3. Unlink credit notes
+    try {
+      db.prepare(`UPDATE credit_notes SET customer_id = NULL WHERE customer_id = ?`).run(customerId);
+    } catch (e) {}
+
+    // 4. Delete loyalty transactions
+    try {
+      db.prepare(`DELETE FROM loyalty_transactions WHERE customer_id = ?`).run(customerId);
+    } catch (e) {}
+
+    // 5. Delete customer ledger entries
+    db.prepare(`DELETE FROM customer_ledger WHERE customer_id = ?`).run(customerId);
+
+    // 6. Delete customer record
+    db.prepare(`DELETE FROM customers WHERE id = ?`).run(customerId);
+  });
+
+  tx();
+
+  return {
+    success: true,
+    message: `Customer "${customer.name}" moved to Recycle Bin (retained for 30 days).`
+  };
 }

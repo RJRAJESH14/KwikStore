@@ -5,12 +5,14 @@ import { formatCurrency } from '../../utils/gstUtils';
 import { BarcodeSvg } from '../common/BarcodeSvg';
 import { openWhatsAppInvoice } from '../../utils/whatsappUtils';
 import { Printer, X, Share2, Copy, Check, QrCode, FileText, Download, Sparkles } from 'lucide-react';
+import { exportElementToPdf } from '../../utils/pdfExport';
 
 export function ThermalReceipt({ invoice, onClose, onPrint, onSwitchToA4 }) {
   const { isDark } = useTheme();
   const [qrCodeUrl, setQrCodeUrl] = useState(null);
   const [paperWidth, setPaperWidth] = useState('80mm'); // '80mm' or '58mm'
   const [copied, setCopied] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   useEffect(() => {
     if (!invoice) return;
@@ -34,51 +36,55 @@ export function ThermalReceipt({ invoice, onClose, onPrint, onSwitchToA4 }) {
 
   if (!invoice) return null;
 
+  const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
+  const [whatsAppNotice, setWhatsAppNotice] = useState(null);
+
   const handlePrint = () => {
     window.print();
     if (onPrint) onPrint();
   };
 
-  const handleShareWhatsApp = () => {
-    openWhatsAppInvoice(invoice);
+  const handleShareWhatsApp = async () => {
+    if (invoice.customer_phone) {
+      setIsSendingWhatsApp(true);
+      try {
+        const res = await fetch('/api/whatsapp/send-invoice', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ invoiceId: invoice.id, phone: invoice.customer_phone })
+        });
+        const data = await res.json();
+        if (data.mode === 'DIRECT_CLOUD_API' && data.success) {
+          setWhatsAppNotice('✓ Sent directly to customer WhatsApp!');
+          setTimeout(() => setWhatsAppNotice(null), 3500);
+          setIsSendingWhatsApp(false);
+          return;
+        } else if (data.webUrl) {
+          window.open(data.webUrl, '_blank');
+        } else {
+          openWhatsAppInvoice(invoice);
+        }
+      } catch (err) {
+        openWhatsAppInvoice(invoice);
+      } finally {
+        setIsSendingWhatsApp(false);
+      }
+    } else {
+      openWhatsAppInvoice(invoice);
+    }
   };
 
-  const handleDownloadHtml = () => {
-    const element = document.getElementById('printable-thermal-receipt');
-    if (!element) return;
-
-    const htmlContent = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>Receipt - ${invoice.invoice_number}</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    @media print {
-      @page { size: ${paperWidth === '58mm' ? '58mm auto' : '80mm auto'}; margin: 0; }
-      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0; padding: 2mm; background: #fff !important; }
-      .print\\:hidden { display: none !important; }
+  const handleDownloadPdf = async () => {
+    try {
+      setIsGeneratingPdf(true);
+      const filename = `Receipt_${invoice.invoice_number}_${(invoice.customer_name || 'Customer').replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+      await exportElementToPdf('printable-thermal-receipt', filename, { scale: 2, margin: 4 });
+    } catch (err) {
+      console.error('Failed to export thermal receipt PDF:', err);
+      alert('Could not export PDF directly. Please use Print and select Save as PDF.');
+    } finally {
+      setIsGeneratingPdf(false);
     }
-  </style>
-</head>
-<body class="bg-white p-2 font-mono text-slate-900 flex justify-center">
-  <div style="width: ${paperWidth === '58mm' ? '220px' : '300px'};">
-    ${element.innerHTML}
-  </div>
-  <script>
-    window.onload = function() { window.print(); }
-  </script>
-</body>
-</html>`;
-
-    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `Receipt_${invoice.invoice_number}_${(invoice.customer_name || 'Customer').replace(/[^a-zA-Z0-9]/g, '_')}.html`;
-    link.click();
-    URL.revokeObjectURL(url);
   };
 
   const totalSavings = Number(invoice.discount_amount || 0) + 
@@ -160,13 +166,18 @@ export function ThermalReceipt({ invoice, onClose, onPrint, onSwitchToA4 }) {
             </button>
 
             <button
-              onClick={handleDownloadHtml}
+              onClick={handleDownloadPdf}
+              disabled={isGeneratingPdf}
               className={`p-1.5 rounded-lg border text-xs font-semibold transition-all ${
                 isDark ? 'border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200' : 'border-slate-300 bg-white hover:bg-slate-50 text-slate-700'
-              }`}
-              title="Download receipt HTML file"
+              } ${isGeneratingPdf ? 'opacity-70 cursor-wait' : ''}`}
+              title="Download Receipt PDF"
             >
-              <Download className="w-3.5 h-3.5 text-sky-500" />
+              {isGeneratingPdf ? (
+                <div className="w-3.5 h-3.5 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Download className="w-3.5 h-3.5 text-sky-500" />
+              )}
             </button>
 
             <button

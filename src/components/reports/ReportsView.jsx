@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useShop } from '../../context/ShopContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
+import { exportToPdf } from '../../utils/pdfExport';
 import { A4TaxInvoice } from '../print/A4TaxInvoice';
 import { ThermalReceipt } from '../print/ThermalReceipt';
 import { OwnerSummaryModal } from './OwnerSummaryModal';
@@ -74,6 +75,21 @@ export function ReportsView() {
   const [isPrintSummaryModalOpen, setIsPrintSummaryModalOpen] = useState(false);
   const [isOwnerSummaryOpen, setIsOwnerSummaryOpen] = useState(false);
   const [ewayBillInvoice, setEwayBillInvoice] = useState(null);
+  const [isExportingSummaryPdf, setIsExportingSummaryPdf] = useState(false);
+
+  const printableSummaryRef = useRef(null);
+
+  const handleDownloadSummaryPdf = async () => {
+    if (!printableSummaryRef.current) return;
+    setIsExportingSummaryPdf(true);
+    try {
+      await exportToPdf(printableSummaryRef.current, `Sales_Summary_${startDate}_to_${endDate}.pdf`);
+    } catch (err) {
+      console.error('Failed to export sales summary PDF:', err);
+    } finally {
+      setIsExportingSummaryPdf(false);
+    }
+  };
 
   // Helper to format ISO date to YYYY-MM-DD
   const formatDateToYMD = (date) => {
@@ -1661,6 +1677,14 @@ export function ReportsView() {
                   <span>Print Report</span>
                 </button>
                 <button
+                  onClick={handleDownloadSummaryPdf}
+                  disabled={isExportingSummaryPdf}
+                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/20 flex items-center space-x-1.5 transition-all disabled:opacity-50"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>{isExportingSummaryPdf ? 'Exporting...' : 'PDF'}</span>
+                </button>
+                <button
                   onClick={() => setIsPrintSummaryModalOpen(false)}
                   className={`p-1.5 rounded-lg ${isDark ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'}`}
                 >
@@ -1670,7 +1694,13 @@ export function ReportsView() {
             </div>
 
             {/* Printable Content Body */}
-            <div className="p-6 overflow-y-auto space-y-6 text-xs font-sans">
+            <div 
+              id="printable-sales-summary"
+              ref={printableSummaryRef}
+              className={`p-6 overflow-y-auto space-y-6 text-xs font-sans ${
+                isDark ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-800'
+              }`}
+            >
               {/* Report Header */}
               <div className="text-center border-b pb-4 space-y-1 border-slate-200 dark:border-slate-800">
                 <h1 className="text-lg font-black tracking-tight text-slate-900 dark:text-white">
@@ -1733,6 +1763,11 @@ export function ReportsView() {
                       <td className="p-2">{inv.payment_mode} ({inv.payment_status})</td>
                     </tr>
                   ))}
+                  {invoices.length === 0 && (
+                    <tr>
+                      <td colSpan="8" className="p-4 text-center text-slate-400 font-sans">No invoices found for selected period.</td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
 

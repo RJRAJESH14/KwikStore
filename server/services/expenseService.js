@@ -98,12 +98,30 @@ export function createExpense(expenseData) {
   return db.prepare(`SELECT * FROM store_expenses WHERE id = ?`).get(result.lastInsertRowid);
 }
 
-export function deleteExpense(expenseId) {
+import { moveToRecycleBin } from './recycleBinService.js';
+
+export function deleteExpense(expenseId, user = null) {
   const db = getDb();
   const exp = db.prepare(`SELECT * FROM store_expenses WHERE id = ?`).get(expenseId);
   if (!exp) throw new Error('Expense record not found');
+
+  try {
+    moveToRecycleBin({
+      shopId: exp.shop_id || 1,
+      itemType: 'EXPENSE',
+      originalId: exp.id,
+      title: `Expense: ${exp.expense_title || exp.title || 'Store Expense'} - ₹${(exp.amount || 0).toLocaleString('en-IN')}`,
+      subtitle: `Category: ${exp.category || 'MISC'} • Mode: ${exp.payment_mode || 'CASH'} • Date: ${exp.expense_date || 'N/A'}`,
+      data: exp,
+      userId: user?.id || null,
+      userName: user?.displayName || user?.username || 'Store Admin'
+    });
+  } catch (archiveErr) {
+    console.warn('Failed to archive expense to recycle bin:', archiveErr.message);
+  }
+
   db.prepare(`DELETE FROM store_expenses WHERE id = ?`).run(expenseId);
-  return { success: true, message: 'Expense deleted successfully' };
+  return { success: true, message: 'Expense moved to Recycle Bin (retained for 30 days).' };
 }
 
 export function getProfitAndLoss(shopId, period = 'this_month', customFrom = null, customTo = null) {

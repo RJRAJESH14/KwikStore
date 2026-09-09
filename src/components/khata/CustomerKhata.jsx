@@ -32,7 +32,20 @@ import {
   Receipt,
   ShoppingBag,
   Tag,
-  ExternalLink
+  ExternalLink,
+  Edit3,
+  Trash2,
+  UserCheck,
+  MapPin,
+  Mail,
+  PhoneCall,
+  ShieldCheck,
+  AlertOctagon,
+  Info,
+  X,
+  User,
+  Save,
+  RefreshCw
 } from 'lucide-react';
 
 export function CustomerKhata() {
@@ -44,6 +57,20 @@ export function CustomerKhata() {
   const [search, setSearch] = useState('');
   const [customerTypeFilter, setCustomerTypeFilter] = useState('ALL'); // ALL, RETAIL, WHOLESALE
   const [selectedCust, setSelectedCust] = useState(null);
+
+  // View Customer Profile Modal
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [customerToView, setCustomerToView] = useState(null);
+
+  // Edit Customer Profile Modal
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [customerToEdit, setCustomerToEdit] = useState(null);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+
+  // Delete Customer Confirmation Modal
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [customerToDelete, setCustomerToDelete] = useState(null);
+  const [isDeletingCust, setIsDeletingCust] = useState(false);
 
   // Customer Khata Sub-tab Switcher
   const [activeKhataTab, setActiveKhataTab] = useState('ledger'); // 'ledger' or 'invoices'
@@ -282,6 +309,106 @@ export function CustomerKhata() {
       }
     } catch (e) {
       alert('Error adding customer.');
+    }
+  };
+
+  // 1. Open View Customer Details Modal
+  const handleOpenViewModal = (cust) => {
+    const target = cust || selectedCust;
+    if (!target) return;
+    setCustomerToView(target);
+    setIsViewModalOpen(true);
+  };
+
+  // 2. Open Edit Customer Modal
+  const handleOpenEditModal = (cust) => {
+    const target = cust || selectedCust;
+    if (!target) return;
+    setCustomerToEdit({
+      id: target.id,
+      shop_id: target.shop_id || activeShop?.id,
+      name: target.name || '',
+      phone: target.phone || '',
+      email: target.email || '',
+      address: target.address || '',
+      gstin: target.gstin || '',
+      state_code: target.state_code || '07',
+      credit_limit: target.credit_limit !== undefined ? target.credit_limit : 25000,
+      route_beat: target.route_beat || '',
+      customer_type: target.customer_type || 'RETAIL'
+    });
+    setIsEditModalOpen(true);
+  };
+
+  // 3. Save Edited Customer Profile
+  const handleSaveEditCustomer = async (e) => {
+    e.preventDefault();
+    if (!customerToEdit || !customerToEdit.id) return;
+    setIsSavingEdit(true);
+    try {
+      const res = await fetch(`/api/customers/${customerToEdit.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...customerToEdit, shop_id: activeShop.id })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setIsEditModalOpen(false);
+        await loadCustomers();
+        if (selectedCust?.id === customerToEdit.id) {
+          setSelectedCust(prev => ({ ...prev, ...customerToEdit }));
+          loadCustomerLedger(customerToEdit.id);
+        }
+      } else {
+        alert(data.message || 'Failed to update customer details.');
+      }
+    } catch (err) {
+      console.error('Error updating customer:', err);
+      alert('Error saving customer changes.');
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
+
+  // 4. Open Delete Customer Modal
+  const handleOpenDeleteModal = (cust) => {
+    const target = cust || selectedCust;
+    if (!target) return;
+    setCustomerToDelete(target);
+    setIsDeleteModalOpen(true);
+  };
+
+  // 5. Confirm Delete Customer
+  const handleConfirmDeleteCustomer = async () => {
+    if (!customerToDelete || !customerToDelete.id) return;
+    setIsDeletingCust(true);
+    try {
+      const res = await fetch(`/api/customers/${customerToDelete.id}`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+      if (data.success) {
+        setIsDeleteModalOpen(false);
+        const deletedId = customerToDelete.id;
+        setCustomerToDelete(null);
+        
+        // Refresh customer list
+        const resCust = await fetch(`/api/customers?shopId=${activeShop.id}&search=${encodeURIComponent(search)}`);
+        if (resCust.ok) {
+          const freshList = await resCust.json();
+          setCustomers(freshList);
+          if (selectedCust?.id === deletedId) {
+            setSelectedCust(freshList.length > 0 ? freshList[0] : null);
+          }
+        }
+      } else {
+        alert(data.message || 'Failed to delete customer.');
+      }
+    } catch (err) {
+      console.error('Error deleting customer:', err);
+      alert('Error deleting customer.');
+    } finally {
+      setIsDeletingCust(false);
     }
   };
 
@@ -558,7 +685,7 @@ export function CustomerKhata() {
                   <div
                     key={c.id}
                     onClick={() => handleSelectCustomer(c)}
-                    className={`p-2.5 rounded-xl cursor-pointer transition-all border ${
+                    className={`p-2.5 rounded-xl cursor-pointer transition-all border group relative ${
                       isSelected
                         ? 'bg-sky-500/15 border-sky-500/70 shadow-sm ring-1 ring-sky-500/30'
                         : isDark ? 'hover:bg-slate-800/50 border-slate-800/60 bg-slate-950/40' : 'hover:bg-slate-100 border-slate-200 bg-white'
@@ -605,7 +732,7 @@ export function CustomerKhata() {
           {selectedCust ? (
             <div className="h-full flex flex-col overflow-hidden">
               {/* Customer Profile Banner & Quick Actions */}
-              <div className={`p-4 border-b flex justify-between items-center shrink-0 ${
+              <div className={`p-4 border-b flex flex-wrap justify-between items-center gap-3 shrink-0 ${
                 isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
               }`}>
                 <div>
@@ -620,7 +747,7 @@ export function CustomerKhata() {
                       </span>
                     )}
                   </div>
-                  <div className="text-xs text-slate-400 mt-1 flex items-center space-x-3 font-mono">
+                  <div className="text-xs text-slate-400 mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono">
                     <span>Mobile: <strong className={isDark ? 'text-slate-200' : 'text-slate-800'}>{selectedCust.phone || 'N/A'}</strong></span>
                     <span>•</span>
                     <span>GSTIN: <strong className="text-cyan-600 dark:text-cyan-400">{selectedCust.gstin || 'Unregistered'}</strong></span>
@@ -628,7 +755,43 @@ export function CustomerKhata() {
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* View Details Button */}
+                  <button
+                    onClick={() => handleOpenViewModal(selectedCust)}
+                    className={`px-2.5 py-1.5 rounded-xl border text-xs font-semibold flex items-center space-x-1.5 transition-all ${
+                      isDark ? 'bg-sky-500/10 border-sky-500/30 text-sky-400 hover:bg-sky-500/20' : 'bg-sky-50 border-sky-200 text-sky-700 hover:bg-sky-100'
+                    }`}
+                    title="View Full Customer Details"
+                  >
+                    <Eye className="w-3.5 h-3.5 text-sky-500" />
+                    <span>View Detail</span>
+                  </button>
+
+                  {/* Edit Customer Button */}
+                  <button
+                    onClick={() => handleOpenEditModal(selectedCust)}
+                    className={`px-2.5 py-1.5 rounded-xl border text-xs font-semibold flex items-center space-x-1.5 transition-all ${
+                      isDark ? 'bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500/20' : 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100'
+                    }`}
+                    title="Edit Customer Profile"
+                  >
+                    <Edit3 className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Edit</span>
+                  </button>
+
+                  {/* Delete Customer Button */}
+                  <button
+                    onClick={() => handleOpenDeleteModal(selectedCust)}
+                    className={`px-2.5 py-1.5 rounded-xl border text-xs font-semibold flex items-center space-x-1.5 transition-all ${
+                      isDark ? 'bg-rose-500/10 border-rose-500/30 text-rose-400 hover:bg-rose-500/20' : 'bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100'
+                    }`}
+                    title="Delete Customer Profile"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                    <span>Delete</span>
+                  </button>
+
                   <a
                     href={getWhatsAppReminderUrl(selectedCust)}
                     target="_blank"
@@ -1490,6 +1653,450 @@ export function CustomerKhata() {
           onPrint={() => window.print()}
           onSwitchToA4={() => setPrintFormat('A4')}
         />
+      )}
+
+      {/* 6. View Customer Details Modal */}
+      {isViewModalOpen && customerToView && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className={`border rounded-2xl w-full max-w-2xl shadow-2xl p-6 space-y-5 text-xs overflow-hidden ${
+            isDark ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-800'
+          }`}>
+            {/* Header */}
+            <div className="flex items-start justify-between border-b pb-4 border-slate-500/20">
+              <div className="flex items-center space-x-3.5">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-sky-600 to-cyan-500 text-white flex items-center justify-center font-black text-lg shadow-lg">
+                  {customerToView.name ? customerToView.name.slice(0, 2).toUpperCase() : 'CU'}
+                </div>
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <h3 className={`text-base font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                      {customerToView.name}
+                    </h3>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-500/10 text-sky-500 dark:text-sky-400 border border-sky-500/30">
+                      {customerToView.customer_type || 'RETAIL'}
+                    </span>
+                    {customerToView.route_beat && (
+                      <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-semibold">
+                        {customerToView.route_beat}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-slate-400 text-[11px] mt-0.5 font-mono">
+                    Customer ID: #{customerToView.id} • Registered in {activeShop?.name || 'Store'}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setIsViewModalOpen(false)}
+                className={`p-1.5 rounded-xl border transition-all ${
+                  isDark ? 'border-slate-800 hover:bg-slate-800 text-slate-400' : 'border-slate-200 hover:bg-slate-100 text-slate-500'
+                }`}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Quick Metrics Bar */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              <div className={`p-3 rounded-xl border ${
+                isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
+              }`}>
+                <div className="text-[10px] text-slate-400 font-semibold uppercase">Pending Udhar Balance</div>
+                <div className={`text-base font-black font-mono mt-0.5 ${
+                  (customerToView.current_balance || 0) > 0 ? 'text-rose-500' : 'text-emerald-500'
+                }`}>
+                  ₹{customerToView.current_balance?.toLocaleString('en-IN') || '0'}
+                </div>
+              </div>
+
+              <div className={`p-3 rounded-xl border ${
+                isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
+              }`}>
+                <div className="text-[10px] text-slate-400 font-semibold uppercase">Credit Limit</div>
+                <div className="text-base font-black font-mono mt-0.5 text-sky-500">
+                  ₹{customerToView.credit_limit?.toLocaleString('en-IN') || '25,000'}
+                </div>
+              </div>
+
+              <div className={`p-3 rounded-xl border ${
+                isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
+              }`}>
+                <div className="text-[10px] text-slate-400 font-semibold uppercase">Loyalty Points</div>
+                <div className="text-base font-black font-mono mt-0.5 text-amber-500">
+                  🎁 {customerToView.loyalty_points || 0} pts
+                </div>
+              </div>
+
+              <div className={`p-3 rounded-xl border ${
+                isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
+              }`}>
+                <div className="text-[10px] text-slate-400 font-semibold uppercase">Lifetime Total Spent</div>
+                <div className="text-base font-black font-mono mt-0.5 text-purple-500">
+                  ₹{(customerToView.total_spent || ledgerSummary?.totalInvoicedAmount || 0).toLocaleString('en-IN')}
+                </div>
+              </div>
+            </div>
+
+            {/* Profile Information Grid */}
+            <div className={`p-4 rounded-xl border space-y-3 ${
+              isDark ? 'bg-slate-950/40 border-slate-800' : 'bg-slate-50/50 border-slate-200'
+            }`}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                <div className="flex items-start space-x-2.5">
+                  <PhoneCall className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
+                  <div>
+                    <div className="text-[10px] text-slate-400 font-semibold uppercase">Contact Phone</div>
+                    <div className="font-mono font-bold text-xs mt-0.5">
+                      {customerToView.phone ? (
+                        <a href={`tel:${customerToView.phone}`} className="hover:underline text-emerald-600 dark:text-emerald-400">
+                          {customerToView.phone}
+                        </a>
+                      ) : (
+                        <span className="text-slate-400">No phone provided</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-2.5">
+                  <Mail className="w-4 h-4 text-sky-500 mt-0.5 shrink-0" />
+                  <div>
+                    <div className="text-[10px] text-slate-400 font-semibold uppercase">Email Address</div>
+                    <div className="font-mono font-bold text-xs mt-0.5">
+                      {customerToView.email ? (
+                        <a href={`mailto:${customerToView.email}`} className="hover:underline text-sky-600 dark:text-sky-400">
+                          {customerToView.email}
+                        </a>
+                      ) : (
+                        <span className="text-slate-400">No email registered</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-2.5">
+                  <ShieldCheck className="w-4 h-4 text-cyan-500 mt-0.5 shrink-0" />
+                  <div>
+                    <div className="text-[10px] text-slate-400 font-semibold uppercase">GSTIN / Tax ID</div>
+                    <div className="font-mono font-bold text-xs mt-0.5 text-cyan-600 dark:text-cyan-400">
+                      {customerToView.gstin || 'Unregistered Consumer (B2C)'}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-2.5">
+                  <MapPin className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+                  <div>
+                    <div className="text-[10px] text-slate-400 font-semibold uppercase">Market Beat / Delivery Route</div>
+                    <div className="font-semibold text-xs mt-0.5">
+                      {customerToView.route_beat || 'General Delivery'}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="md:col-span-2 flex items-start space-x-2.5">
+                  <Building className="w-4 h-4 text-indigo-500 mt-0.5 shrink-0" />
+                  <div className="flex-1">
+                    <div className="text-[10px] text-slate-400 font-semibold uppercase">Full Billing & Delivery Address</div>
+                    <div className="font-medium text-xs mt-0.5 text-slate-700 dark:text-slate-200">
+                      {customerToView.address || 'No physical address stored.'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions Footer */}
+            <div className="flex flex-wrap justify-between items-center gap-2 pt-2 border-t border-slate-500/20">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsViewModalOpen(false);
+                  handleOpenDeleteModal(customerToView);
+                }}
+                className="px-3 py-2 rounded-xl text-rose-500 hover:bg-rose-500/10 border border-rose-500/30 text-xs font-semibold flex items-center space-x-1.5 transition-all"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Delete Customer</span>
+              </button>
+
+              <div className="flex items-center space-x-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsViewModalOpen(false);
+                    handleOpenEditModal(customerToView);
+                  }}
+                  className="px-3.5 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-600 dark:text-amber-400 text-xs font-bold flex items-center space-x-1.5 transition-all"
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                  <span>Edit Profile</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsViewModalOpen(false)}
+                  className={`px-4 py-2 rounded-xl font-bold ${
+                    isDark ? 'bg-slate-800 hover:bg-slate-700 text-slate-200' : 'bg-slate-200 hover:bg-slate-300 text-slate-800'
+                  }`}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 7. Edit Customer Modal */}
+      {isEditModalOpen && customerToEdit && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className={`border rounded-2xl w-full max-w-lg shadow-2xl p-6 space-y-4 text-xs ${
+            isDark ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-800'
+          }`}>
+            <div className="flex items-center justify-between border-b pb-3 border-slate-500/20">
+              <div className="flex items-center space-x-2">
+                <Edit3 className="w-4 h-4 text-amber-500" />
+                <h3 className={`text-sm font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                  Edit Customer Profile
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsEditModalOpen(false)}
+                className={`p-1 rounded-lg border transition-all ${
+                  isDark ? 'border-slate-800 hover:bg-slate-800 text-slate-400' : 'border-slate-200 hover:bg-slate-100 text-slate-500'
+                }`}
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditCustomer} className="space-y-3">
+              <div>
+                <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                  Customer / Business Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={customerToEdit.name}
+                  onChange={(e) => setCustomerToEdit({ ...customerToEdit, name: e.target.value })}
+                  className={`w-full border rounded-lg p-2 outline-none ${
+                    isDark ? 'bg-slate-950 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
+                  }`}
+                  placeholder="e.g. Ramesh Kumar / Star Mart"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                    Phone Number *
+                  </label>
+                  <input
+                    type="tel"
+                    required
+                    value={customerToEdit.phone}
+                    onChange={(e) => setCustomerToEdit({ ...customerToEdit, phone: e.target.value })}
+                    className={`w-full border rounded-lg p-2 font-mono outline-none ${
+                      isDark ? 'bg-slate-950 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
+                    }`}
+                    placeholder="e.g. 9876543210"
+                  />
+                </div>
+                <div>
+                  <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                    Customer Type
+                  </label>
+                  <select
+                    value={customerToEdit.customer_type}
+                    onChange={(e) => setCustomerToEdit({ ...customerToEdit, customer_type: e.target.value })}
+                    className={`w-full border rounded-lg p-2 outline-none cursor-pointer ${
+                      isDark ? 'bg-slate-950 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
+                    }`}
+                  >
+                    <option value="RETAIL">Retail Consumer (B2C)</option>
+                    <option value="WHOLESALE">Wholesale / Business Dealer (B2B)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    value={customerToEdit.email || ''}
+                    onChange={(e) => setCustomerToEdit({ ...customerToEdit, email: e.target.value })}
+                    className={`w-full border rounded-lg p-2 outline-none ${
+                      isDark ? 'bg-slate-950 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
+                    }`}
+                    placeholder="e.g. customer@example.com"
+                  />
+                </div>
+                <div>
+                  <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                    GSTIN (Tax Number)
+                  </label>
+                  <input
+                    type="text"
+                    value={customerToEdit.gstin || ''}
+                    onChange={(e) => setCustomerToEdit({ ...customerToEdit, gstin: e.target.value.toUpperCase() })}
+                    className={`w-full border rounded-lg p-2 font-mono uppercase outline-none ${
+                      isDark ? 'bg-slate-950 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
+                    }`}
+                    placeholder="e.g. 07AAAAA0000A1Z5"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                    Credit (Udhar) Limit (₹)
+                  </label>
+                  <input
+                    type="number"
+                    value={customerToEdit.credit_limit}
+                    onChange={(e) => setCustomerToEdit({ ...customerToEdit, credit_limit: parseFloat(e.target.value) || 0 })}
+                    className={`w-full border rounded-lg p-2 font-mono outline-none ${
+                      isDark ? 'bg-slate-950 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
+                    }`}
+                  />
+                </div>
+                <div>
+                  <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                    Market Beat / Delivery Route
+                  </label>
+                  <input
+                    type="text"
+                    value={customerToEdit.route_beat || ''}
+                    onChange={(e) => setCustomerToEdit({ ...customerToEdit, route_beat: e.target.value })}
+                    className={`w-full border rounded-lg p-2 outline-none ${
+                      isDark ? 'bg-slate-950 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
+                    }`}
+                    placeholder="e.g. Monday Beat / Sector 4"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                  Full Address
+                </label>
+                <input
+                  type="text"
+                  value={customerToEdit.address || ''}
+                  onChange={(e) => setCustomerToEdit({ ...customerToEdit, address: e.target.value })}
+                  className={`w-full border rounded-lg p-2 outline-none ${
+                    isDark ? 'bg-slate-950 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
+                  }`}
+                  placeholder="e.g. Shop No. 12, Main Bazaar Road"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-2 pt-3 border-t border-slate-500/20">
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(false)}
+                  className={`px-3 py-1.5 rounded-lg font-semibold ${
+                    isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-200 text-slate-700'
+                  }`}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingEdit}
+                  className="px-4 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white font-bold flex items-center space-x-1.5"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  <span>{isSavingEdit ? 'Saving...' : 'Save Changes'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 8. Delete Customer Confirmation Modal */}
+      {isDeleteModalOpen && customerToDelete && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className={`border rounded-2xl w-full max-w-md shadow-2xl p-6 space-y-4 text-xs ${
+            isDark ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-800'
+          }`}>
+            <div className="flex items-center space-x-3 text-rose-500">
+              <div className="w-10 h-10 rounded-xl bg-rose-500/15 flex items-center justify-center shrink-0">
+                <AlertOctagon className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className={`text-sm font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                  Delete Customer Profile?
+                </h3>
+                <p className="text-slate-400 text-[11px]">This action cannot be undone.</p>
+              </div>
+            </div>
+
+            <div className={`p-3 rounded-xl border space-y-1.5 ${
+              isDark ? 'bg-slate-950/70 border-slate-800' : 'bg-slate-50 border-slate-200'
+            }`}>
+              <div className="flex justify-between">
+                <span className="text-slate-400 font-medium">Customer:</span>
+                <span className="font-bold">{customerToDelete.name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400 font-medium">Phone:</span>
+                <span className="font-mono">{customerToDelete.phone || 'N/A'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400 font-medium">Current Balance:</span>
+                <span className={`font-mono font-bold ${
+                  (customerToDelete.current_balance || 0) > 0 ? 'text-rose-500' : 'text-emerald-500'
+                }`}>
+                  ₹{customerToDelete.current_balance?.toLocaleString('en-IN') || '0'}
+                </span>
+              </div>
+            </div>
+
+            {(customerToDelete.current_balance || 0) > 0 && (
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-[11px] flex items-start space-x-2">
+                <AlertTriangle className="w-4 h-4 shrink-0 text-rose-500 mt-0.5" />
+                <div>
+                  <strong>Outstanding Debt Warning:</strong> This customer has an unpaid balance of ₹{customerToDelete.current_balance?.toLocaleString('en-IN')}. Deleting will erase active ledger tracking.
+                </div>
+              </div>
+            )}
+
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              Historical sales invoices will remain recorded in your accounts for tax and audit compliance, with this customer unlinked safely.
+            </p>
+
+            <div className="flex justify-end space-x-2 pt-2 border-t border-slate-500/20">
+              <button
+                type="button"
+                onClick={() => setIsDeleteModalOpen(false)}
+                disabled={isDeletingCust}
+                className={`px-3 py-1.5 rounded-lg font-semibold ${
+                  isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-200 text-slate-700'
+                }`}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteCustomer}
+                disabled={isDeletingCust}
+                className="px-4 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white font-bold flex items-center space-x-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>{isDeletingCust ? 'Deleting...' : 'Yes, Delete Customer'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -112,31 +112,31 @@ export function ExpiryTracker({ onOpenProductEdit }) {
                 <th className="p-3 text-right">Stock Value (₹)</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/40 font-mono">
+            <tbody className={`divide-y font-mono ${isDark ? 'divide-slate-800/40' : 'divide-slate-200'}`}>
               {items.map((it, idx) => (
-                <tr key={idx} className="hover:bg-slate-800/20 transition-colors">
+                <tr key={idx} className={isDark ? 'hover:bg-slate-800/40 transition-colors' : 'hover:bg-slate-50 transition-colors'}>
                   <td className="p-3 font-sans">
-                    <div className="font-bold text-slate-200">{it.product_name}</div>
-                    <div className="text-[10px] text-slate-500">{it.barcode || 'No barcode'}</div>
+                    <div className={`font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{it.product_name}</div>
+                    <div className={`text-[10px] ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>{it.barcode || 'No barcode'}</div>
                   </td>
-                  <td className="p-3 text-slate-300">{it.batch_no || 'DEFAULT'}</td>
-                  <td className="p-3 text-amber-400 font-bold">
+                  <td className={`p-3 ${isDark ? 'text-slate-300' : 'text-slate-800'}`}>{it.batch_no || 'DEFAULT'}</td>
+                  <td className="p-3 text-amber-600 dark:text-amber-400 font-bold">
                     {new Date(it.expiry_date).toLocaleDateString('en-IN')}
                   </td>
                   <td className="p-3 font-sans">
                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                       it.daysToExpiry < 0
-                        ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                        ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/30'
                         : it.daysToExpiry <= 15
-                          ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                          : 'bg-yellow-500/20 text-yellow-400'
+                          ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                          : 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400'
                     }`}>
                       {it.daysToExpiry < 0 ? `EXPIRED (${Math.abs(it.daysToExpiry)}d ago)` : `In ${it.daysToExpiry} days`}
                     </span>
                   </td>
-                  <td className="p-3 font-bold text-slate-200">{it.stock_qty} {it.unit || 'PCS'}</td>
-                  <td className="p-3 font-sans text-slate-400">{it.supplier_name || 'Direct Vendor'}</td>
-                  <td className="p-3 text-right font-bold text-slate-300">
+                  <td className={`p-3 font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{it.stock_qty} {it.unit || 'PCS'}</td>
+                  <td className={`p-3 font-sans ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>{it.supplier_name || 'Direct Vendor'}</td>
+                  <td className={`p-3 text-right font-bold ${isDark ? 'text-slate-200' : 'text-slate-900'}`}>
                     ₹{((it.stock_qty || 0) * (it.purchase_rate || it.selling_rate || 0)).toLocaleString('en-IN')}
                   </td>
                 </tr>

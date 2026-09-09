@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 
 const CURRENT_VERSION = '1.1.0';
-const GITHUB_REPO_URL = 'https://github.com/RJRAJESH14/KwikStore';
+const CLOUD_UPDATES_URL = 'https://fleetbillpro.in';
 const GITHUB_API_RELEASES = 'https://api.github.com/repos/RJRAJESH14/KwikStore/releases/latest';
 
 export function HelpModal({ isOpen, onClose, initialTab = 'support' }) {
@@ -110,23 +110,36 @@ export function HelpModal({ isOpen, onClose, initialTab = 'support' }) {
       // Offline or network error
       setUpdateStatus('LATEST');
     } finally {
-      setTimeout(() => {
-        setCheckingUpdate(false);
-      }, 600);
+      setCheckingUpdate(false);
+    }
+  };
+
+  const handleTriggerDownload = () => {
+    if (window.electronAPI?.downloadUpdate) {
+      setDownloading(true);
+      window.electronAPI.downloadUpdate();
+    } else {
+      window.open('https://fleetbillpro.in', '_blank');
+    }
+  };
+
+  const handleTriggerInstall = () => {
+    if (window.electronAPI?.installUpdate) {
+      window.electronAPI.installUpdate();
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className={`border rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col animate-in fade-in zoom-in-95 duration-150 ${
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className={`w-full max-w-2xl rounded-2xl shadow-2xl border overflow-hidden flex flex-col max-h-[90vh] ${
         isDark ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-800'
       }`}>
-        {/* Header */}
-        <div className={`p-5 border-b flex justify-between items-center ${
-          isDark ? 'bg-slate-800/90 border-slate-700' : 'bg-slate-100 border-slate-200'
+        {/* Modal Header */}
+        <div className={`px-6 py-4 border-b flex items-center justify-between ${
+          isDark ? 'bg-slate-950/70 border-slate-800' : 'bg-slate-50 border-slate-200'
         }`}>
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-sky-500 flex items-center justify-center text-white shadow-md shadow-brand-500/20">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-emerald-500 text-white flex items-center justify-center shadow-md shadow-brand-500/20">
               <HelpCircle className="w-5 h-5" />
             </div>
             <div>
@@ -134,7 +147,7 @@ export function HelpModal({ isOpen, onClose, initialTab = 'support' }) {
                 Help, Support & Updates
               </h2>
               <p className="text-xs text-slate-400">
-                FleetBillPro Customer Care • GitHub Version Updates • Shortcuts & Documentation
+                FleetBillPro Customer Care • Official Cloud Updates • Shortcuts & Documentation
               </p>
             </div>
           </div>
@@ -447,7 +460,7 @@ export function HelpModal({ isOpen, onClose, initialTab = 'support' }) {
                       ) : null}
 
                       <a
-                        href={latestRelease?.html_url || GITHUB_REPO_URL}
+                        href={latestRelease?.html_url || 'https://fleetbillpro.in'}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-300 font-bold text-xs border border-slate-700 flex items-center space-x-1.5 transition-all"
@@ -460,29 +473,29 @@ export function HelpModal({ isOpen, onClose, initialTab = 'support' }) {
                 </div>
               )}
 
-              {/* GitHub Repository Card */}
+              {/* Official Cloud Distribution Channel Card */}
               <div className={`p-4 rounded-xl border space-y-2.5 ${
                 isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
               }`}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
-                    <Github className="w-4 h-4 text-slate-300" />
-                    <span className="font-bold">Official GitHub Repository</span>
+                    <Globe className="w-4 h-4 text-brand-400" />
+                    <span className="font-bold">Official Cloud Distribution Channel</span>
                   </div>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
-                    RJRAJESH14/KwikStore
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-brand-500/20 text-brand-400 border border-brand-500/30 font-bold">
+                    FleetBillPro Enterprise
                   </span>
                 </div>
                 <p className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                  Source code, releases, changelog, and desktop installers are maintained on GitHub.
+                  Software patches, security advisories, GST updates, and release installers are verified and distributed via FleetBillPro Cloud.
                 </p>
                 <a
-                  href={GITHUB_REPO_URL}
+                  href="https://fleetbillpro.in"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center space-x-1.5 text-brand-500 hover:text-brand-400 font-bold text-xs hover:underline"
                 >
-                  <span>https://github.com/RJRAJESH14/KwikStore</span>
+                  <span>https://fleetbillpro.in</span>
                   <ExternalLink className="w-3 h-3" />
                 </a>
               </div>
@@ -537,8 +550,8 @@ export function HelpModal({ isOpen, onClose, initialTab = 'support' }) {
               <div className={`p-3 rounded-xl border inline-block text-left text-[11px] font-mono space-y-1 ${
                 isDark ? 'bg-slate-950 border-slate-800 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-600'
               }`}>
-                <div>Repository: <a href={GITHUB_REPO_URL} target="_blank" rel="noopener noreferrer" className="text-brand-500 hover:underline">github.com/RJRAJESH14/KwikStore</a></div>
-                <div>Support Portal: <a href="https://fleetbillpro.in" target="_blank" rel="noopener noreferrer" className="text-sky-500 hover:underline">fleetbillpro.in</a></div>
+                <div>Edition: KwikStore Pro Universal Retail & Wholesale POS</div>
+                <div>Support Portal: <a href="https://fleetbillpro.in" target="_blank" rel="noopener noreferrer" className="text-brand-500 hover:underline">fleetbillpro.in</a></div>
                 <div>Local Database: SQLite 3 WAL Mode with Multi-Counter LAN Sync</div>
               </div>
             </div>

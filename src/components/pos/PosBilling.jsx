@@ -50,7 +50,9 @@ import {
   Grid,
   UserCheck,
   Coins,
-  Split
+  Split,
+  Scale,
+  Share2
 } from 'lucide-react';
 import { 
   playScanSound, 
@@ -63,7 +65,7 @@ import {
 export function PosBilling() {
   const { user } = useAuth();
   const { activeShop } = useShop();
-  const { activeShift, fetchActiveShift } = useNetwork();
+  const { activeShift, fetchActiveShift, subscribeToScanner, scaleStatus, updateCustomerDisplay } = useNetwork();
   const { isDark } = useTheme();
 
   // State
@@ -386,6 +388,23 @@ export function PosBilling() {
     }, 50);
   };
 
+  // Automatic Barcode Scanner Listener
+  useEffect(() => {
+    if (!subscribeToScanner) return;
+    const unsubscribe = subscribeToScanner((scannedCode) => {
+      if (!scannedCode) return;
+      const q = scannedCode.trim().toLowerCase();
+      const exactMatch = products.find(p => p.barcode && p.barcode.toLowerCase() === q);
+      if (exactMatch) {
+        addToCart(exactMatch);
+      } else {
+        setSearchQuery(scannedCode);
+        if (searchInputRef.current) searchInputRef.current.focus();
+      }
+    });
+    return () => unsubscribe();
+  }, [subscribeToScanner, products, addToCart]);
+
   const updateCartItemQty = (index, qty) => {
     const val = parseFloat(qty);
     if (isNaN(val) || val <= 0) {
@@ -438,6 +457,31 @@ export function PosBilling() {
                      (parseFloat(splitAmounts.card) || 0) +
                      (parseFloat(splitAmounts.credit) || 0);
   const splitRemaining = Math.max(0, grandTotal - splitTotal);
+
+  // Broadcast live cart state to Customer Facing Display (CFD)
+  useEffect(() => {
+    if (!updateCustomerDisplay) return;
+    const totalSavings = (cart.reduce((sum, item) => sum + (Number(item.discount_amount || 0)), 0)) + loyaltyDiscount + creditNoteDiscount;
+    updateCustomerDisplay({
+      cart,
+      total: grandTotal,
+      totalSavings,
+      customerName: selectedCustomer?.name,
+      upiQrUrl: isTenderOpen && paymentMode === 'UPI' ? upiQrUrl : null,
+      status: isTenderOpen ? (paymentMode === 'UPI' ? 'PAYMENT' : 'ACTIVE') : cart.length > 0 ? 'ACTIVE' : 'IDLE',
+      shop: activeShop
+    });
+  }, [cart, grandTotal, selectedCustomer, isTenderOpen, paymentMode, upiQrUrl, loyaltyDiscount, creditNoteDiscount, activeShop, updateCustomerDisplay]);
+
+  // Grab electronic weighing scale weight into a cart item
+  const applyScaleWeightToCart = (index) => {
+    const weight = Number(scaleStatus?.effectiveWeight || scaleStatus?.weight || 0);
+    if (weight > 0) {
+      updateCartItemQty(index, weight);
+    } else {
+      alert('Scale weight is 0.000 kg. Please place the product on your electronic weighing scale or test with simulation in Hardware Hub.');
+    }
+  };
 
   // Credit note verification
   const handleVerifyCreditNote = async () => {
@@ -1042,13 +1086,24 @@ export function PosBilling() {
                             <div className="inline-flex items-center space-x-1">
                               <input
                                 type="number"
-                                min="1"
+                                min="0.001"
+                                step="any"
                                 value={item.quantity}
                                 onChange={(e) => updateCartItemQty(idx, e.target.value)}
                                 className={`w-14 border rounded px-1.5 py-1 text-center font-bold focus:border-brand-500 outline-none ${
                                   isDark ? 'bg-slate-950 border-slate-700 text-white' : 'bg-slate-100 border-slate-300 text-slate-900'
                                 }`}
                               />
+                              <button
+                                type="button"
+                                onClick={() => applyScaleWeightToCart(idx)}
+                                className={`p-1 rounded border transition-colors ${
+                                  isDark ? 'border-slate-700 bg-slate-800 hover:bg-purple-900/40 text-purple-400' : 'border-slate-300 bg-white hover:bg-purple-50 text-purple-600'
+                                }`}
+                                title="Grab live weight from Electronic Weighing Scale"
+                              >
+                                <Scale className="w-3.5 h-3.5" />
+                              </button>
                               <span className="text-[10px] text-slate-400">{item.unit}</span>
                               {item.free_quantity > 0 && (
                                 <span className="px-1 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-600 dark:text-emerald-300 font-bold text-[10px]">

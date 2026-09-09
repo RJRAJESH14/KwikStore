@@ -3,6 +3,7 @@ import { useShop } from '../../context/ShopContext';
 import { useTheme } from '../../context/ThemeContext';
 import { generateUpiQrDataUrl } from '../../utils/upiQr';
 import { BarcodeSvg } from '../common/BarcodeSvg';
+import { FirstRunWizard } from '../common/FirstRunWizard';
 import { 
   Store, 
   Building2, 
@@ -25,7 +26,14 @@ import {
   Image as ImageIcon,
   Trash2,
   Zap,
-  Info
+  Info,
+  Wand2,
+  AlertTriangle,
+  RotateCcw,
+  Send,
+  MessageCircle,
+  Key,
+  Share2
 } from 'lucide-react';
 
 const INDIAN_STATES = [
@@ -62,16 +70,53 @@ const INDIAN_STATES = [
   { code: '37', name: 'Andhra Pradesh' }
 ];
 
+export const STORE_ICONS = [
+  { icon: '🏬', label: 'General Retail', type: 'GENERAL_RETAIL' },
+  { icon: '🛒', label: 'Supermarket / Grocery', type: 'SUPERMARKET' },
+  { icon: '👗', label: 'Garments & Fashion', type: 'GARMENTS' },
+  { icon: '💊', label: 'Pharmacy & Medical', type: 'PHARMACY' },
+  { icon: '🔩', label: 'Hardware & Sanitary', type: 'HARDWARE' },
+  { icon: '📱', label: 'Electronics & Mobile', type: 'ELECTRONICS' },
+  { icon: '🎂', label: 'Bakery & Sweets', type: 'BAKERY' },
+  { icon: '📦', label: 'FMCG Wholesale', type: 'FMCG_WHOLESALE' },
+  { icon: '💎', label: 'Jewelry & Watches' },
+  { icon: '🍕', label: 'Restaurant & Cafe' },
+  { icon: '📚', label: 'Bookstore & Stationery' },
+  { icon: '👟', label: 'Footwear & Shoes' },
+  { icon: '💄', label: 'Cosmetics & Beauty' },
+  { icon: '🥩', label: 'Meat & Poultry' },
+  { icon: '🚗', label: 'Auto Parts & Garage' },
+  { icon: '🪴', label: 'Nursery & Plant Store' }
+];
+
+export const getDefaultIconForShopType = (type) => {
+  switch (type) {
+    case 'GARMENTS': return '👗';
+    case 'PHARMACY': return '💊';
+    case 'HARDWARE': return '🔩';
+    case 'SUPERMARKET': return '🛒';
+    case 'ELECTRONICS': return '📱';
+    case 'BAKERY': return '🎂';
+    case 'FMCG_WHOLESALE': return '📦';
+    case 'GENERAL_RETAIL':
+    default:
+      return '🏬';
+  }
+};
+
 export function ShopInvoiceSettings() {
   const { activeShop, shops, switchShop, fetchShops } = useShop();
   const { isDark } = useTheme();
   const fileInputRef = useRef(null);
+  const logoInputRef = useRef(null);
 
   const [formData, setFormData] = useState({
     id: 1,
     name: '',
     legal_name: '',
     shop_type: 'GENERAL_RETAIL',
+    shop_icon: '🏬',
+    logo_url: null,
     phone: '',
     email: '',
     address: '',
@@ -98,6 +143,62 @@ export function ShopInvoiceSettings() {
   const [saving, setSaving] = useState(false);
   const [notification, setNotification] = useState(null);
 
+  // Commercial Turnkey State
+  const [showWizard, setShowWizard] = useState(false);
+  const [showCleanModal, setShowCleanModal] = useState(false);
+  const [cleanOptions, setCleanOptions] = useState({
+    resetSales: true,
+    resetKhata: true,
+    resetInventory: false,
+    resetHrms: false
+  });
+  const [cleanConfirmText, setCleanConfirmText] = useState('');
+  const [cleaning, setCleaning] = useState(false);
+
+  // WhatsApp Cloud API State
+  const [whatsAppConfig, setWhatsAppConfig] = useState({
+    isEnabled: false,
+    phoneNumberId: '',
+    accessToken: '',
+    businessAccountId: '',
+    senderNumber: '',
+    defaultCountryCode: '91'
+  });
+  const [testPhone, setTestPhone] = useState('');
+  const [testingWhatsApp, setTestingWhatsApp] = useState(false);
+  const [whatsAppTestStatus, setWhatsAppTestStatus] = useState(null);
+
+  useEffect(() => {
+    fetch('/api/whatsapp/config')
+      .then(res => res.json())
+      .then(data => {
+        if (data.config) setWhatsAppConfig(data.config);
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleTestWhatsApp = async () => {
+    if (!testPhone.trim()) {
+      alert('Please enter a valid mobile number (e.g. 9876543210) to send a test WhatsApp message.');
+      return;
+    }
+    setTestingWhatsApp(true);
+    setWhatsAppTestStatus(null);
+    try {
+      const res = await fetch('/api/whatsapp/test-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: testPhone.trim() })
+      });
+      const data = await res.json();
+      setWhatsAppTestStatus(data);
+    } catch (e) {
+      setWhatsAppTestStatus({ success: false, error: e.message });
+    } finally {
+      setTestingWhatsApp(false);
+    }
+  };
+
   useEffect(() => {
     if (activeShop) {
       setFormData({
@@ -105,6 +206,8 @@ export function ShopInvoiceSettings() {
         name: activeShop.name || '',
         legal_name: activeShop.legal_name || '',
         shop_type: activeShop.shop_type || 'GENERAL_RETAIL',
+        shop_icon: activeShop.shop_icon || getDefaultIconForShopType(activeShop.shop_type),
+        logo_url: activeShop.logo_url || null,
         phone: activeShop.phone || '',
         email: activeShop.email || '',
         address: activeShop.address || '',
@@ -172,11 +275,49 @@ export function ShopInvoiceSettings() {
     }));
   };
 
+  const handleLogoUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file (PNG, JPG, or SVG).');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setFormData(prev => ({
+        ...prev,
+        logo_url: reader.result
+      }));
+      setNotification({ type: 'success', message: 'Shop brand logo uploaded successfully!' });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveLogo = () => {
+    setFormData(prev => ({
+      ...prev,
+      logo_url: null
+    }));
+  };
+
+  const handleShopTypeChange = (newType) => {
+    const defaultIcon = getDefaultIconForShopType(newType);
+    setFormData(prev => ({
+      ...prev,
+      shop_type: newType,
+      shop_icon: defaultIcon
+    }));
+  };
+
   const applySectorPreset = (sectorKey) => {
+    const icon = getDefaultIconForShopType(sectorKey);
     if (sectorKey === 'GARMENTS') {
       setFormData(prev => ({
         ...prev,
         shop_type: 'GARMENTS',
+        shop_icon: icon,
         terms_conditions: '1. Exchange allowed within 7 days with original price tag and bill intact.\n2. No exchange or return on altered garments or sale items.\n3. Subject to local jurisdiction.',
         thermal_footer_note: 'Thank you for shopping with us! Looking forward to your next visit.'
       }));
@@ -185,6 +326,7 @@ export function ShopInvoiceSettings() {
       setFormData(prev => ({
         ...prev,
         shop_type: 'PHARMACY',
+        shop_icon: icon,
         terms_conditions: '1. Licensed Retail Pharmacy. Store medicines in cool, dry place.\n2. Schedule H & H1 drugs dispensed strictly against valid medical prescription.\n3. Cut strips or temperature-sensitive medicines cannot be returned.',
         thermal_footer_note: 'Wish you a speedy recovery! Get Well Soon.'
       }));
@@ -193,6 +335,7 @@ export function ShopInvoiceSettings() {
       setFormData(prev => ({
         ...prev,
         shop_type: 'HARDWARE',
+        shop_icon: icon,
         terms_conditions: '1. Goods once cut or customized (pipes, wires, cables, sheets) cannot be returned.\n2. In case of manufacturing defect, brand warranty applies.\n3. 18% p.a. interest chargeable on delayed credit payments after 30 days.',
         thermal_footer_note: 'Thank you for your business! Best building & hardware supplies always.'
       }));
@@ -201,6 +344,7 @@ export function ShopInvoiceSettings() {
       setFormData(prev => ({
         ...prev,
         shop_type: 'SUPERMARKET',
+        shop_icon: icon,
         terms_conditions: '1. Goods once sold will not be taken back without bill.\n2. Please check packed items, seal integrity, and expiry dates before leaving counter.\n3. Subject to local jurisdiction.',
         thermal_footer_note: 'Thank you for shopping at our supermarket! Visit again soon.'
       }));
@@ -228,8 +372,16 @@ export function ShopInvoiceSettings() {
         body: JSON.stringify(formData)
       });
       const data = await res.json();
+
+      // Also save WhatsApp Cloud API configuration
+      await fetch('/api/whatsapp/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(whatsAppConfig)
+      });
+
       if (data.success) {
-        setNotification({ type: 'success', message: 'Shop details and Invoice QR settings saved successfully!' });
+        setNotification({ type: 'success', message: 'Shop details, WhatsApp Cloud API & Invoice settings saved successfully!' });
         await fetchShops();
       } else {
         alert(data.message || 'Error saving shop settings.');
@@ -238,6 +390,34 @@ export function ShopInvoiceSettings() {
       alert('Error updating shop settings.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleCleanDemoData = async () => {
+    if (cleanConfirmText.trim().toUpperCase() !== 'CLEAN') {
+      alert('Please type CLEAN in capital letters to confirm reset.');
+      return;
+    }
+    setCleaning(true);
+    try {
+      const res = await fetch('/api/settings/clean-demo-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cleanOptions)
+      });
+      const data = await res.json();
+      if (data.success) {
+        setShowCleanModal(false);
+        setCleanConfirmText('');
+        setNotification({ type: 'success', message: 'Demo data cleaned successfully! Your store is ready for real customers.' });
+        if (fetchShops) await fetchShops();
+      } else {
+        alert(data.message || 'Error cleaning demo data');
+      }
+    } catch (err) {
+      alert('Failed to clean demo data: ' + err.message);
+    } finally {
+      setCleaning(false);
     }
   };
 
@@ -271,13 +451,33 @@ export function ShopInvoiceSettings() {
           </p>
         </div>
 
-        {/* Branch Selector & Save Button */}
-        <div className="flex items-center space-x-3">
+        {/* Action Buttons: Wizard, Clean Demo, Branch Selector & Save */}
+        <div className="flex items-center space-x-2.5">
+          <button
+            onClick={() => setShowWizard(true)}
+            className="px-3 py-1.5 rounded-xl border border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-xs font-bold flex items-center space-x-1.5 transition-all"
+            title="Launch 3-step Store Setup Wizard"
+          >
+            <Wand2 className="w-3.5 h-3.5 text-indigo-500" />
+            <span>Setup Wizard</span>
+          </button>
+
+          <button
+            onClick={() => setShowCleanModal(true)}
+            className="px-3 py-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-bold flex items-center space-x-1.5 transition-all"
+            title="Clean demo invoices & transactions to start fresh"
+          >
+            <RotateCcw className="w-3.5 h-3.5 text-rose-500" />
+            <span>Clean Demo Data</span>
+          </button>
+
           <div className={`flex items-center space-x-2 border rounded-xl px-3 py-1.5 ${
             isDark ? 'bg-slate-800 border-slate-700' : 'bg-slate-100 border-slate-300'
           }`}>
-            <Building2 className="w-4 h-4 text-brand-500" />
-            <span className="text-xs text-slate-400">Editing:</span>
+            <span className="text-base select-none leading-none">
+              {formData.shop_icon || getDefaultIconForShopType(formData.shop_type)}
+            </span>
+            <span className="text-xs text-slate-400 font-medium">Branch:</span>
             <select
               value={activeShop ? activeShop.id : ''}
               onChange={(e) => switchShop(e.target.value)}
@@ -285,7 +485,7 @@ export function ShopInvoiceSettings() {
             >
               {shops.map(s => (
                 <option key={s.id} value={s.id} className={isDark ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'}>
-                  {s.name} ({s.city})
+                  {(s.shop_icon || getDefaultIconForShopType(s.shop_type))} {s.name} ({s.city})
                 </option>
               ))}
             </select>
@@ -328,6 +528,102 @@ export function ShopInvoiceSettings() {
                 </h2>
               </div>
 
+              {/* Shop Icon & Avatar Selector */}
+              <div className={`p-4 rounded-xl border ${
+                isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
+              } space-y-3`}>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <label className={`block text-xs font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+                      Default Store Icon & Brand Avatar
+                    </label>
+                    <span className="text-[11px] text-slate-400">
+                      Select a default industry store icon or upload your custom logo for invoices, receipts & branch switcher.
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <input 
+                      type="file" 
+                      ref={logoInputRef} 
+                      onChange={handleLogoUpload} 
+                      accept="image/*" 
+                      className="hidden" 
+                    />
+                    <button
+                      type="button"
+                      onClick={() => logoInputRef.current?.click()}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold border flex items-center space-x-1.5 transition-all ${
+                        isDark 
+                          ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-200' 
+                          : 'bg-white hover:bg-slate-100 border-slate-300 text-slate-700 shadow-sm'
+                      }`}
+                    >
+                      <Upload className="w-3.5 h-3.5 text-brand-500" />
+                      <span>Upload Logo</span>
+                    </button>
+                    {formData.logo_url && (
+                      <button
+                        type="button"
+                        onClick={handleRemoveLogo}
+                        className="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-rose-500 hover:bg-rose-500/10 border border-rose-500/30 transition-all flex items-center space-x-1"
+                        title="Remove Logo"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Reset</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-4 pt-1">
+                  {/* Active Preview Avatar */}
+                  <div className="relative group shrink-0">
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-500/20 via-brand-600/10 to-emerald-500/20 border-2 border-brand-500/40 flex items-center justify-center text-3xl shadow-inner overflow-hidden">
+                      {formData.logo_url ? (
+                        <img src={formData.logo_url} alt="Shop Logo" className="w-full h-full object-contain p-1" />
+                      ) : (
+                        <span>{formData.shop_icon || getDefaultIconForShopType(formData.shop_type)}</span>
+                      )}
+                    </div>
+                    <span className="absolute -bottom-1 -right-1 bg-brand-600 text-white text-[9px] font-bold px-1.5 py-0.2 rounded-full shadow">
+                      Active
+                    </span>
+                  </div>
+
+                  {/* Icon Quick Grid */}
+                  <div className="flex-1">
+                    <div className="text-[11px] font-medium text-slate-400 mb-1.5">
+                      Choose Default Store Icon:
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {STORE_ICONS.map((item) => {
+                        const isSelected = (!formData.logo_url && (formData.shop_icon === item.icon || (!formData.shop_icon && getDefaultIconForShopType(formData.shop_type) === item.icon)));
+                        return (
+                          <button
+                            key={item.label}
+                            type="button"
+                            onClick={() => {
+                              setFormData(prev => ({ ...prev, shop_icon: item.icon, logo_url: null }));
+                            }}
+                            title={item.label}
+                            className={`w-9 h-9 rounded-xl flex items-center justify-center text-lg transition-all ${
+                              isSelected
+                                ? 'bg-brand-500/20 border-2 border-brand-500 shadow-md scale-105'
+                                : isDark
+                                  ? 'bg-slate-900 border border-slate-800 hover:border-slate-700 hover:bg-slate-800'
+                                  : 'bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-100 shadow-sm'
+                            }`}
+                          >
+                            <span>{item.icon}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                 <div>
                   <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
@@ -368,19 +664,19 @@ export function ShopInvoiceSettings() {
                   </label>
                   <select
                     value={formData.shop_type}
-                    onChange={(e) => setFormData({ ...formData, shop_type: e.target.value })}
-                    className={`w-full border rounded-xl p-2.5 outline-none ${
+                    onChange={(e) => handleShopTypeChange(e.target.value)}
+                    className={`w-full border rounded-xl p-2.5 outline-none font-medium ${
                       isDark ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
                     }`}
                   >
-                    <option value="GENERAL_RETAIL">General Retail Store</option>
-                    <option value="SUPERMARKET">Supermarket / Grocery / Kirana</option>
-                    <option value="FMCG_WHOLESALE">FMCG & Food Distributor (Biscuits/Masala)</option>
-                    <option value="GARMENTS">Garments & Apparel Outlet</option>
-                    <option value="PHARMACY">Pharmacy & Medical Healthcare</option>
-                    <option value="ELECTRONICS">Electronics & Mobile Store (IMEI)</option>
-                    <option value="HARDWARE">Hardware & Sanitary Store</option>
-                    <option value="BAKERY">Bakery & Sweets Shop</option>
+                    <option value="GENERAL_RETAIL">🏬 General Retail Store</option>
+                    <option value="SUPERMARKET">🛒 Supermarket / Grocery / Kirana</option>
+                    <option value="FMCG_WHOLESALE">📦 FMCG & Food Distributor (Biscuits/Masala)</option>
+                    <option value="GARMENTS">👗 Garments & Apparel Outlet</option>
+                    <option value="PHARMACY">💊 Pharmacy & Medical Healthcare</option>
+                    <option value="ELECTRONICS">📱 Electronics & Mobile Store (IMEI)</option>
+                    <option value="HARDWARE">🔩 Hardware & Sanitary Store</option>
+                    <option value="BAKERY">🎂 Bakery & Sweets Shop</option>
                   </select>
                 </div>
 
@@ -872,6 +1168,121 @@ export function ShopInvoiceSettings() {
               </div>
             </div>
 
+            {/* Section 5: Direct WhatsApp Cloud API Messaging Integration */}
+            <div className={`p-5 rounded-2xl border shadow-sm space-y-4 ${
+              isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200'
+            }`}>
+              <div className="flex items-center justify-between border-b pb-3 border-slate-700/50">
+                <div className="flex items-center space-x-2">
+                  <MessageCircle className="w-4 h-4 text-emerald-500" />
+                  <h2 className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+                    5. Direct WhatsApp Cloud API Messaging (Meta Graph API)
+                  </h2>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={whatsAppConfig.isEnabled}
+                    onChange={(e) => setWhatsAppConfig({ ...whatsAppConfig, isEnabled: e.target.checked })}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+                </label>
+              </div>
+
+              <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                Send digital tax invoices & PDF receipts directly to customers' WhatsApp phones in the background via Official Meta WhatsApp Cloud API.
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                <div>
+                  <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                    WhatsApp Phone Number ID
+                  </label>
+                  <input
+                    type="text"
+                    value={whatsAppConfig.phoneNumberId}
+                    onChange={(e) => setWhatsAppConfig({ ...whatsAppConfig, phoneNumberId: e.target.value })}
+                    className={`w-full border rounded-xl p-2.5 outline-none font-mono ${
+                      isDark ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
+                    }`}
+                    placeholder="e.g. 109283746592817"
+                  />
+                </div>
+
+                <div>
+                  <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                    Meta Business Account ID (WABA ID)
+                  </label>
+                  <input
+                    type="text"
+                    value={whatsAppConfig.businessAccountId}
+                    onChange={(e) => setWhatsAppConfig({ ...whatsAppConfig, businessAccountId: e.target.value })}
+                    className={`w-full border rounded-xl p-2.5 outline-none font-mono ${
+                      isDark ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
+                    }`}
+                    placeholder="e.g. 987654321098765"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                    Meta System User Permanent Access Token
+                  </label>
+                  <input
+                    type="password"
+                    value={whatsAppConfig.accessToken}
+                    onChange={(e) => setWhatsAppConfig({ ...whatsAppConfig, accessToken: e.target.value })}
+                    className={`w-full border rounded-xl p-2.5 outline-none font-mono ${
+                      isDark ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
+                    }`}
+                    placeholder="EAAB..."
+                  />
+                </div>
+              </div>
+
+              {/* Test Message Dispatch Box */}
+              <div className={`p-3.5 rounded-xl border space-y-2 text-xs ${
+                isDark ? 'bg-slate-950/40 border-slate-800' : 'bg-emerald-50/50 border-emerald-200'
+              }`}>
+                <div className="font-bold text-emerald-500 flex items-center gap-1.5">
+                  <Send className="w-3.5 h-3.5" />
+                  <span>Send WhatsApp Test Verification:</span>
+                </div>
+                <div className="flex space-x-2">
+                  <input
+                    type="tel"
+                    value={testPhone}
+                    onChange={(e) => setTestPhone(e.target.value)}
+                    placeholder="Enter 10-digit Mobile Number"
+                    className={`flex-1 border rounded-xl p-2 font-mono outline-none text-xs ${
+                      isDark ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleTestWhatsApp}
+                    disabled={testingWhatsApp}
+                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow transition-all flex items-center space-x-1.5 shrink-0"
+                  >
+                    <Send className={`w-3.5 h-3.5 ${testingWhatsApp ? 'animate-spin' : ''}`} />
+                    <span>{testingWhatsApp ? 'Sending...' : 'Send Test Bill'}</span>
+                  </button>
+                </div>
+
+                {whatsAppTestStatus && (
+                  <div className={`p-2.5 rounded-xl text-xs font-semibold flex items-center gap-2 ${
+                    whatsAppTestStatus.success 
+                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
+                      : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                  }`}>
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>{whatsAppTestStatus.message || whatsAppTestStatus.error}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
             <button
               type="submit"
               disabled={saving}
@@ -1174,6 +1585,129 @@ export function ShopInvoiceSettings() {
           </div>
         </div>
       </div>
+
+      {/* 3-Step First-Run Onboarding Setup Wizard */}
+      {showWizard && (
+        <FirstRunWizard
+          isOpen={showWizard}
+          onClose={() => setShowWizard(false)}
+          onComplete={async () => {
+            setShowWizard(false);
+            if (fetchShops) await fetchShops();
+            setNotification({ type: 'success', message: 'Store profile configured successfully via Setup Wizard!' });
+          }}
+        />
+      )}
+
+      {/* Commercial Clean Demo Data Modal */}
+      {showCleanModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+          <div className={`w-full max-w-lg rounded-2xl shadow-2xl border overflow-hidden p-6 space-y-5 ${
+            isDark ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+          }`}>
+            <div className="flex items-start space-x-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-5 h-5 text-rose-500" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold">Clean Demo Transactions & Start Fresh</h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Prepare KwikStore Pro for your real store by wiping test invoices, mock sales, and sample customer balances.
+                </p>
+              </div>
+            </div>
+
+            <div className={`p-4 rounded-xl border space-y-3 ${
+              isDark ? 'bg-slate-950/70 border-slate-800' : 'bg-slate-50 border-slate-200'
+            }`}>
+              <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Select What to Reset</div>
+              
+              <label className="flex items-center space-x-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={cleanOptions.resetSales}
+                  onChange={(e) => setCleanOptions(prev => ({ ...prev, resetSales: e.target.checked }))}
+                  className="rounded border-slate-700 text-rose-600 focus:ring-rose-500"
+                />
+                <span className="text-xs font-medium">Reset Sales, Invoices & Payment Logs (Recommended)</span>
+              </label>
+
+              <label className="flex items-center space-x-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={cleanOptions.resetKhata}
+                  onChange={(e) => setCleanOptions(prev => ({ ...prev, resetKhata: e.target.checked }))}
+                  className="rounded border-slate-700 text-rose-600 focus:ring-rose-500"
+                />
+                <span className="text-xs font-medium">Reset Customer Udhar Khata Balances & Ledgers</span>
+              </label>
+
+              <label className="flex items-center space-x-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={cleanOptions.resetInventory}
+                  onChange={(e) => setCleanOptions(prev => ({ ...prev, resetInventory: e.target.checked }))}
+                  className="rounded border-slate-700 text-rose-600 focus:ring-rose-500"
+                />
+                <span className="text-xs font-medium">Wipe Sample Products & Inventory (Optional)</span>
+              </label>
+
+              <label className="flex items-center space-x-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={cleanOptions.resetHrms}
+                  onChange={(e) => setCleanOptions(prev => ({ ...prev, resetHrms: e.target.checked }))}
+                  className="rounded border-slate-700 text-rose-600 focus:ring-rose-500"
+                />
+                <span className="text-xs font-medium">Wipe Sample Staff Attendance & Payroll Records</span>
+              </label>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-rose-500">
+                Type "CLEAN" to confirm transaction wipe:
+              </label>
+              <input
+                type="text"
+                placeholder="CLEAN"
+                value={cleanConfirmText}
+                onChange={(e) => setCleanConfirmText(e.target.value)}
+                className={`w-full px-3 py-2 rounded-xl text-xs font-bold font-mono tracking-widest border outline-none ${
+                  isDark 
+                    ? 'bg-slate-950 border-rose-500/50 text-white focus:border-rose-500' 
+                    : 'bg-white border-rose-300 text-slate-900 focus:border-rose-500'
+                }`}
+              />
+            </div>
+
+            <div className="flex items-center justify-end space-x-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCleanModal(false);
+                  setCleanConfirmText('');
+                }}
+                className={`px-4 py-2 rounded-xl text-xs font-bold border ${
+                  isDark ? 'border-slate-700 hover:bg-slate-800 text-slate-300' : 'border-slate-300 hover:bg-slate-100 text-slate-700'
+                }`}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={handleCleanDemoData}
+                disabled={cleaning || cleanConfirmText.trim().toUpperCase() !== 'CLEAN'}
+                className="px-5 py-2 rounded-xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white text-xs font-bold shadow-lg shadow-rose-500/25 flex items-center space-x-1.5 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              >
+                <RotateCcw className={`w-3.5 h-3.5 ${cleaning ? 'animate-spin' : ''}`} />
+                <span>{cleaning ? 'Wiping...' : 'Confirm & Reset Now'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

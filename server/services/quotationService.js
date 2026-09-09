@@ -332,15 +332,37 @@ export function updateQuotationStatus(id, status) {
   return { success: true, message: `Quotation status updated to ${status}.` };
 }
 
-export function deleteQuotation(id) {
+import { moveToRecycleBin } from './recycleBinService.js';
+
+export function deleteQuotation(id, user = null) {
   const db = getDb();
   const q = db.prepare(`SELECT * FROM quotations WHERE id = ?`).get(id);
   if (!q) throw new Error('Quotation not found.');
+
+  const items = db.prepare(`SELECT * FROM quotation_items WHERE quotation_id = ?`).all(id);
+
+  try {
+    moveToRecycleBin({
+      shopId: q.shop_id || 1,
+      itemType: 'QUOTATION',
+      originalId: q.id,
+      title: `Quotation #${q.quotation_number} - ₹${(q.grand_total || 0).toLocaleString('en-IN')}`,
+      subtitle: `Customer: ${q.customer_name || 'Walk-in'} • ${items.length} items • Status: ${q.status}`,
+      data: {
+        quotation: q,
+        items
+      },
+      userId: user?.id || null,
+      userName: user?.displayName || user?.username || 'Store Admin'
+    });
+  } catch (archiveErr) {
+    console.warn('Failed to archive quotation to recycle bin:', archiveErr.message);
+  }
   
   db.prepare(`DELETE FROM quotation_items WHERE quotation_id = ?`).run(id);
   db.prepare(`DELETE FROM quotations WHERE id = ?`).run(id);
   
-  return { success: true, message: `Quotation ${q.quotation_number} deleted successfully.` };
+  return { success: true, message: `Quotation ${q.quotation_number} moved to Recycle Bin (retained for 30 days).` };
 }
 
 export function convertQuotationToInvoice(quotationId, cashierUserId, paymentMode = 'CASH', paymentDetails = {}) {

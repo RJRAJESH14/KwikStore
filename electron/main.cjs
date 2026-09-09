@@ -132,9 +132,9 @@ function createApplicationMenu() {
           }
         },
         {
-          label: 'Check for Updates (GitHub)',
+          label: 'Check for Updates',
           click: () => {
-            shell.openExternal('https://github.com/RJRAJESH14/KwikStore/releases');
+            shell.openExternal('https://fleetbillpro.in');
           }
         },
         { type: 'separator' },
@@ -145,7 +145,7 @@ function createApplicationMenu() {
               type: 'info',
               title: 'About KwikStore Pro',
               message: 'KwikStore Pro POS v1.1.0',
-              detail: 'Universal Indian Billing POS + Multi-Shop + HRMS Desktop Application\n\nHelpline & WhatsApp: +91 8338833377\nWebsite: https://fleetbillpro.in\nGitHub: https://github.com/RJRAJESH14/KwikStore'
+              detail: 'Universal Indian Billing POS + Multi-Shop + HRMS Desktop Application\n\nHelpline & WhatsApp: +91 8338833377\nOfficial Portal: https://fleetbillpro.in\nFleetBillPro Enterprise Cloud Channel'
             });
           }
         }
@@ -217,6 +217,43 @@ app.whenReady().then(async () => {
       }
     });
   }
+
+  // Hardware & Printer IPC Handlers
+  ipcMain.handle('get-system-printers', async () => {
+    try {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        const printers = await mainWindow.webContents.getPrintersAsync();
+        return { success: true, printers };
+      }
+      return { success: true, printers: [] };
+    } catch (err) {
+      console.error('Failed to enumerate Electron printers:', err);
+      return { success: false, error: err.message, printers: [] };
+    }
+  });
+
+  ipcMain.handle('print-to-device', async (event, options = {}) => {
+    try {
+      if (!mainWindow || mainWindow.isDestroyed()) {
+        return { success: false, error: 'Main window not available' };
+      }
+      return new Promise((resolve) => {
+        mainWindow.webContents.print(
+          {
+            silent: options.silent || false,
+            printBackground: true,
+            deviceName: options.printerName || '',
+            margins: { marginType: 'none' }
+          },
+          (success, failureReason) => {
+            resolve({ success, failureReason });
+          }
+        );
+      });
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

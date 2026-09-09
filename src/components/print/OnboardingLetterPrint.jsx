@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTheme } from '../../context/ThemeContext';
 import { numberToIndianWords } from '../../utils/numberToWords';
 import { Printer, X, Download, Share2, Building2, CheckCircle2, Award, Calendar, FileText, UserCheck, Shield } from 'lucide-react';
+import { exportElementToPdf } from '../../utils/pdfExport';
 
 export function OnboardingLetterPrint({ employee, shop, onClose }) {
   const { isDark } = useTheme();
@@ -40,42 +41,19 @@ export function OnboardingLetterPrint({ employee, shop, onClose }) {
     window.open(url, '_blank');
   };
 
-  const handleDownloadHtml = () => {
-    const element = document.getElementById('printable-onboarding-letter');
-    if (!element) return;
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
-    const htmlContent = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>Appointment Letter - ${employee.employee_code} - ${employee.full_name}</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    @media print {
-      @page { size: A4 portrait; margin: 12mm; }
-      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: #fff !important; }
-      .print\\:hidden { display: none !important; }
+  const handleDownloadPdf = async () => {
+    try {
+      setIsGeneratingPdf(true);
+      const filename = `Appointment_Letter_${employee.employee_code}_${employee.full_name.replace(/\s+/g, '_')}.pdf`;
+      await exportElementToPdf('printable-onboarding-letter', filename, { scale: 2, margin: 6 });
+    } catch (err) {
+      console.error('Failed to export PDF:', err);
+      alert('Could not export PDF directly. Please use Print Letter and select Save as PDF.');
+    } finally {
+      setIsGeneratingPdf(false);
     }
-  </style>
-</head>
-<body class="bg-white p-8 font-sans text-slate-900 flex justify-center">
-  <div style="width: 780px;">
-    ${element.innerHTML}
-  </div>
-  <script>
-    window.onload = function() { window.print(); }
-  </script>
-</body>
-</html>`;
-
-    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `Appointment_Letter_${employee.employee_code}_${employee.full_name.replace(/\s+/g, '_')}.html`;
-    link.click();
-    URL.revokeObjectURL(url);
   };
 
   return (
@@ -116,14 +94,19 @@ export function OnboardingLetterPrint({ employee, shop, onClose }) {
             </button>
 
             <button
-              onClick={handleDownloadHtml}
+              onClick={handleDownloadPdf}
+              disabled={isGeneratingPdf}
               className={`px-3.5 py-2 rounded-xl text-xs font-bold border flex items-center space-x-1.5 transition-all ${
                 isDark ? 'bg-slate-800 hover:bg-slate-700 text-white border-slate-700' : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-300'
-              }`}
-              title="Download HTML Letter"
+              } ${isGeneratingPdf ? 'opacity-70 cursor-wait' : ''}`}
+              title="Download official PDF Appointment Letter"
             >
-              <Download className="w-4 h-4 text-sky-500" />
-              <span>Download</span>
+              {isGeneratingPdf ? (
+                <div className="w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Download className="w-4 h-4 text-purple-500" />
+              )}
+              <span>{isGeneratingPdf ? 'Saving PDF...' : 'Download PDF'}</span>
             </button>
 
             <button

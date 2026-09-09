@@ -1,11 +1,27 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Printer, X, Download, Truck, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { exportElementToPdf } from '../../utils/pdfExport';
 
 export function DeliveryChallanPrint({ transfer, onClose }) {
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
   if (!transfer) return null;
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleDownloadPdf = async () => {
+    try {
+      setIsGeneratingPdf(true);
+      const filename = `DeliveryChallan_${transfer.transfer_number}.pdf`;
+      await exportElementToPdf('printable-delivery-challan', filename, { scale: 2, margin: 6 });
+    } catch (err) {
+      console.error('Failed to export PDF:', err);
+      alert('Could not export PDF directly. Please use Print Delivery Challan.');
+    } finally {
+      setIsGeneratingPdf(false);
+    }
   };
 
   return (
@@ -23,6 +39,19 @@ export function DeliveryChallanPrint({ transfer, onClose }) {
           </div>
           <div className="flex items-center gap-2">
             <button
+              onClick={handleDownloadPdf}
+              disabled={isGeneratingPdf}
+              className={`px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700 flex items-center gap-1.5 transition-all ${isGeneratingPdf ? 'opacity-70 cursor-wait' : ''}`}
+              title="Download PDF Delivery Challan"
+            >
+              {isGeneratingPdf ? (
+                <div className="w-3.5 h-3.5 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Download className="w-3.5 h-3.5 text-emerald-400" />
+              )}
+              <span>{isGeneratingPdf ? 'Saving PDF...' : 'Download PDF'}</span>
+            </button>
+            <button
               onClick={handlePrint}
               className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow flex items-center gap-1.5"
             >
@@ -39,7 +68,7 @@ export function DeliveryChallanPrint({ transfer, onClose }) {
         </div>
 
         {/* Printable Delivery Challan Body */}
-        <div className="p-8 overflow-y-auto space-y-5 text-xs font-sans print:p-0">
+        <div id="printable-delivery-challan" className="p-8 overflow-y-auto space-y-5 text-xs font-sans print:p-0">
           <div className="border-2 border-black p-6 space-y-4">
             
             {/* Title */}

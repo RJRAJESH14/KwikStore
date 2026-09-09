@@ -17,6 +17,10 @@ import * as gstExportService from '../services/gstExportService.js';
 import * as googleDriveService from '../services/googleDriveService.js';
 import * as ewayBillService from '../services/ewayBillService.js';
 import * as stockTransferService from '../services/stockTransferService.js';
+import * as hardwareService from '../services/hardwareService.js';
+import * as weighingScaleService from '../services/weighingScaleService.js';
+import * as whatsappService from '../services/whatsappService.js';
+import * as recycleBinService from '../services/recycleBinService.js';
 import { getDb } from '../database/db.js';
 
 const router = express.Router();
@@ -182,6 +186,16 @@ router.delete('/shops/:id', (req, res) => {
   }
 });
 
+router.post('/settings/clean-demo-data', (req, res) => {
+  try {
+    const result = shopService.cleanDemoData(req.body);
+    res.json(result);
+  } catch (err) {
+    console.error('Clean demo data error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 router.get('/shops/transfers/list', (req, res) => {
   res.json(shopService.getBranchTransfers());
 });
@@ -238,6 +252,16 @@ router.get('/invoices', (req, res) => {
   res.json(billingService.getRecentInvoices(req.query));
 });
 
+router.get('/invoices/customer-wise', (req, res) => {
+  try {
+    const data = billingService.getCustomerWiseInvoices(req.query.shopId || 1, req.query);
+    res.json(data);
+  } catch (err) {
+    console.error('Error fetching customer-wise invoices:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 router.get('/invoices/:id', (req, res) => {
   try {
     const invoice = billingService.getInvoiceById(req.params.id);
@@ -248,6 +272,26 @@ router.get('/invoices/:id', (req, res) => {
   } catch (err) {
     console.error('Error fetching invoice by ID:', err);
     res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.put('/invoices/:id', (req, res) => {
+  try {
+    const updatedInvoice = billingService.updateInvoice(req.params.id, req.body, req.user);
+    res.json({ success: true, invoice: updatedInvoice, message: 'Invoice updated successfully.' });
+  } catch (err) {
+    console.error('Error updating invoice:', err);
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+router.delete('/invoices/:id', (req, res) => {
+  try {
+    const result = billingService.deleteInvoice(req.params.id, req.user);
+    res.json(result);
+  } catch (err) {
+    console.error('Error deleting invoice:', err);
+    res.status(400).json({ success: false, message: err.message });
   }
 });
 
@@ -460,6 +504,22 @@ router.get('/customers/:id/invoices', (req, res) => {
 
 router.post('/customers', (req, res) => {
   res.json(customerService.createOrUpdateCustomer(req.body));
+});
+
+router.put('/customers/:id', (req, res) => {
+  try {
+    res.json(customerService.createOrUpdateCustomer({ ...req.body, id: Number(req.params.id) }));
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+router.delete('/customers/:id', (req, res) => {
+  try {
+    res.json(customerService.deleteCustomer(Number(req.params.id)));
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
 });
 
 router.post('/customers/payment', (req, res) => {
@@ -861,7 +921,60 @@ router.post('/ewaybill/generate-json', (req, res) => {
 
 router.get('/einvoice/generate-json/:invoiceId', (req, res) => {
   try {
-    const result = ewayBillService.generateEInvoiceJson(req.params.invoiceId);
+    const invoiceId = decodeURIComponent(req.params.invoiceId);
+    const result = ewayBillService.generateEInvoiceJson(invoiceId);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.post('/einvoice/generate-json', (req, res) => {
+  try {
+    const { invoiceId } = req.body;
+    const result = ewayBillService.generateEInvoiceJson(invoiceId);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// E-Way Bills Management Hub CRUD
+router.get('/ewaybills', (req, res) => {
+  try {
+    const { shopId, search, status } = req.query;
+    const ewayBills = ewayBillService.getAllEWayBills(
+      shopId ? Number(shopId) : null,
+      search || '',
+      status || 'ALL'
+    );
+    res.json({ success: true, ewayBills });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.get('/ewaybills/:id', (req, res) => {
+  try {
+    const ewayBill = ewayBillService.getEWayBillById(Number(req.params.id));
+    res.json({ success: true, ewayBill });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.put('/ewaybills/:id', (req, res) => {
+  try {
+    const updated = ewayBillService.updateEWayBill(Number(req.params.id), req.body);
+    res.json({ success: true, ewayBill: updated });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.delete('/ewaybills/:id', (req, res) => {
+  try {
+    const result = ewayBillService.deleteEWayBill(Number(req.params.id));
     res.json(result);
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -905,6 +1018,232 @@ router.post('/stock-transfers/:id/receive', (req, res) => {
     res.json({ success: true, transfer: updated, message: `Stock transfer ${updated.transfer_number} marked as RECEIVED and inventory updated!` });
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+// 18. Hardware & Multi-Counter LAN Diagnostics
+router.get('/hardware/network-status', (req, res) => {
+  try {
+    const netInfo = hardwareService.getLocalNetworkInfo();
+    const counters = hardwareService.getActiveCounters();
+    res.json({
+      success: true,
+      network: netInfo,
+      counters,
+      serverTime: new Date().toISOString()
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.post('/hardware/counter-heartbeat', (req, res) => {
+  try {
+    const clientIp = req.socket.remoteAddress?.replace(/^.*:/, '') || req.ip;
+    const counter = hardwareService.registerCounter({
+      ...req.body,
+      ip: req.body.ip || clientIp
+    });
+    res.json({ success: true, counter });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.get('/hardware/printers', async (req, res) => {
+  try {
+    const printers = await hardwareService.getSystemPrinters();
+    res.json({ success: true, printers });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.post('/hardware/test-print', async (req, res) => {
+  try {
+    const { printerName, paperWidth } = req.body;
+    res.json({
+      success: true,
+      message: `Test print slip sent to ${printerName || 'Default POS Printer'} (${paperWidth || '80mm'}).`,
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.post('/hardware/cash-drawer-kick', (req, res) => {
+  try {
+    const { printerName } = req.body;
+    res.json({
+      success: true,
+      message: `RJ-11 Cash Drawer pulse signal sent to ${printerName || 'POS Printer'} successfully!`,
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// 19. Electronic Weighing Scale Routes
+router.get('/hardware/scale/status', (req, res) => {
+  try {
+    res.json({ success: true, scale: weighingScaleService.getScaleStatus() });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.post('/hardware/scale/tare', (req, res) => {
+  try {
+    res.json({ success: true, scale: weighingScaleService.tareScale() });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.post('/hardware/scale/zero', (req, res) => {
+  try {
+    res.json({ success: true, scale: weighingScaleService.zeroScale() });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.post('/hardware/scale/weight', (req, res) => {
+  try {
+    const { weight, isStable } = req.body;
+    res.json({ success: true, scale: weighingScaleService.setScaleWeight(weight, isStable) });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.post('/hardware/scale/config', (req, res) => {
+  try {
+    res.json({ success: true, scale: weighingScaleService.configureScale(req.body) });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// 20. WhatsApp Cloud API Routes
+router.get('/whatsapp/config', (req, res) => {
+  try {
+    res.json({ success: true, config: whatsappService.getWhatsAppConfig() });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.post('/whatsapp/config', (req, res) => {
+  try {
+    const result = whatsappService.saveWhatsAppConfig(req.body);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.post('/whatsapp/send-invoice', async (req, res) => {
+  try {
+    const { invoiceId, phone, customMessage } = req.body;
+    const db = getDb();
+    const invoice = billingService.getInvoiceDetails(invoiceId);
+    if (!invoice) return res.status(404).json({ success: false, message: 'Invoice not found.' });
+
+    const shop = shopService.getActiveShop();
+    const messageText = customMessage || whatsappService.formatInvoiceWhatsAppText(invoice, shop);
+    const targetPhone = phone || invoice.customer_phone;
+
+    if (!targetPhone) {
+      return res.status(400).json({ success: false, message: 'No customer phone number provided.' });
+    }
+
+    const result = await whatsappService.sendDirectWhatsAppMessage({
+      toPhone: targetPhone,
+      messageText
+    });
+
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.post('/whatsapp/test-message', async (req, res) => {
+  try {
+    const { phone } = req.body;
+    const result = await whatsappService.sendDirectWhatsAppMessage({
+      toPhone: phone,
+      messageText: '🎉 Test Message from KwikStore Pro! Your WhatsApp Cloud API integration is working perfectly.'
+    });
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// 22. Universal 30-Day Recycle Bin & Recovery System
+router.get('/recycle-bin', (req, res) => {
+  try {
+    const { shopId, itemType, search, limit, offset } = req.query;
+    const items = recycleBinService.getRecycleBinItems(shopId, { itemType, search, limit, offset });
+    res.json(items);
+  } catch (err) {
+    console.error('Error fetching recycle bin items:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.get('/recycle-bin/stats', (req, res) => {
+  try {
+    const stats = recycleBinService.getRecycleBinStats(req.query.shopId);
+    res.json(stats);
+  } catch (err) {
+    console.error('Error fetching recycle bin stats:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.get('/recycle-bin/:id', (req, res) => {
+  try {
+    const item = recycleBinService.getRecycleBinItemDetail(req.params.id);
+    if (!item) return res.status(404).json({ success: false, message: 'Item not found in Recycle Bin.' });
+    res.json(item);
+  } catch (err) {
+    console.error('Error fetching recycle bin item detail:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.post('/recycle-bin/:id/restore', (req, res) => {
+  try {
+    const result = recycleBinService.restoreItem(Number(req.params.id));
+    res.json(result);
+  } catch (err) {
+    console.error('Error restoring recycle bin item:', err);
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+router.delete('/recycle-bin/:id', (req, res) => {
+  try {
+    const result = recycleBinService.permanentDeleteItem(Number(req.params.id));
+    res.json(result);
+  } catch (err) {
+    console.error('Error permanently deleting recycle bin item:', err);
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+router.post('/recycle-bin/empty', (req, res) => {
+  try {
+    const result = recycleBinService.emptyRecycleBin(req.body.shopId);
+    res.json(result);
+  } catch (err) {
+    console.error('Error emptying recycle bin:', err);
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 

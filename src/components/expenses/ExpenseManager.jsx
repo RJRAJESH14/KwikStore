@@ -248,39 +248,41 @@ export function ExpenseManager() {
                 <th className="p-3.5 text-center">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/40 font-mono">
+            <tbody className={`divide-y font-mono ${isDark ? 'divide-slate-800/40' : 'divide-slate-200'}`}>
               {expenses.map((exp) => (
-                <tr key={exp.id} className="hover:bg-slate-800/20 transition-colors">
-                  <td className="p-3.5 text-slate-400 whitespace-nowrap">
+                <tr key={exp.id} className={isDark ? 'hover:bg-slate-800/40 transition-colors' : 'hover:bg-slate-50 transition-colors'}>
+                  <td className={`p-3.5 whitespace-nowrap ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                     {new Date(exp.expense_date).toLocaleDateString('en-IN')}
                   </td>
                   <td className="p-3.5 font-sans">
-                    <div className="font-bold text-slate-200">{exp.expense_title}</div>
-                    {exp.notes && <div className="text-[11px] text-slate-400">{exp.notes}</div>}
+                    <div className={`font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{exp.expense_title}</div>
+                    {exp.notes && <div className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>{exp.notes}</div>}
                   </td>
                   <td className="p-3.5 font-sans">
-                    <span className="px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-400 text-[10px] font-bold">
+                    <span className="px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-600 dark:text-rose-400 text-[10px] font-bold">
                       {exp.category?.replace(/_/g, ' ')}
                     </span>
                   </td>
-                  <td className="p-3.5 font-sans text-slate-300">
+                  <td className={`p-3.5 font-sans ${isDark ? 'text-slate-300' : 'text-slate-800 font-medium'}`}>
                     {exp.paid_to || '-'}
                   </td>
                   <td className="p-3.5 font-sans">
-                    <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px] font-bold">
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                      isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-800 border border-slate-200'
+                    }`}>
                       {exp.payment_mode}
                     </span>
                   </td>
-                  <td className="p-3.5 font-sans text-slate-400">
+                  <td className={`p-3.5 font-sans ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                     {exp.created_by_name || 'Staff'}
                   </td>
-                  <td className="p-3.5 text-right font-bold text-rose-400 text-sm">
+                  <td className="p-3.5 text-right font-bold text-rose-600 dark:text-rose-400 text-sm">
                     ₹{(exp.amount || 0).toLocaleString('en-IN')}
                   </td>
                   <td className="p-3.5 text-center">
                     <button
                       onClick={() => handleDelete(exp.id)}
-                      className="p-1 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                      className="p-1 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
                       title="Delete expense"
                     >
                       <Trash2 className="w-4 h-4" />

@@ -116,11 +116,41 @@ export function createOrUpdateSupplier(data) {
   }
 }
 
-export function deleteSupplier(id) {
+import { moveToRecycleBin } from './recycleBinService.js';
+
+export function deleteSupplier(id, user = null) {
   const db = getDb();
+  const supplier = db.prepare(`SELECT * FROM suppliers WHERE id = ?`).get(id);
+  if (!supplier) {
+    throw new Error('Supplier not found');
+  }
+
+  // Find linked product IDs before unlinking
+  const linkedProducts = db.prepare(`SELECT id FROM products WHERE supplier_id = ?`).all(id);
+  const linkedProductIds = linkedProducts.map(p => p.id);
+
+  // Archive to Recycle Bin
+  try {
+    moveToRecycleBin({
+      shopId: supplier.shop_id || 1,
+      itemType: 'SUPPLIER',
+      originalId: supplier.id,
+      title: `Supplier: ${supplier.name}`,
+      subtitle: `Contact: ${supplier.contact_person || 'N/A'} • Phone: ${supplier.phone || 'N/A'} • GSTIN: ${supplier.gstin || 'N/A'}`,
+      data: {
+        supplier,
+        linkedProductIds
+      },
+      userId: user?.id || null,
+      userName: user?.displayName || user?.username || 'Store Admin'
+    });
+  } catch (archiveErr) {
+    console.warn('Failed to archive supplier to recycle bin:', archiveErr.message);
+  }
+
   // Safe soft delete
   db.prepare(`UPDATE suppliers SET is_active = 0 WHERE id = ?`).run(id);
   // Unlink products
   db.prepare(`UPDATE products SET supplier_id = NULL WHERE supplier_id = ?`).run(id);
-  return { success: true, message: 'Supplier removed successfully.' };
+  return { success: true, message: 'Supplier moved to Recycle Bin (retained for 30 days).' };
 }

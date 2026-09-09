@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useTheme } from '../../context/ThemeContext';
 import { generateUpiQrDataUrl } from '../../utils/upiQr';
 import { Printer, X, Download, FileText, Share2, DollarSign, Calendar, Building, Phone } from 'lucide-react';
+import { exportElementToPdf } from '../../utils/pdfExport';
 
 export function CustomerStatementPrint({ customer, ledger, summary, shop, dateRange, onClose }) {
   const { isDark } = useTheme();
@@ -26,38 +27,19 @@ export function CustomerStatementPrint({ customer, ledger, summary, shop, dateRa
     window.print();
   };
 
-  const handleDownloadHtml = () => {
-    const element = document.getElementById('printable-customer-statement');
-    if (!element) return;
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
-    const htmlContent = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>Statement of Account - ${customer.name}</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    @media print {
-      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  const handleDownloadPdf = async () => {
+    try {
+      setIsGeneratingPdf(true);
+      const filename = `Statement_${customer.name.replace(/[^a-zA-Z0-9]/g, '_')}_${dateRange?.startDate || 'All'}_to_${dateRange?.endDate || 'Now'}.pdf`;
+      await exportElementToPdf('printable-customer-statement', filename, { scale: 2, margin: 6 });
+    } catch (err) {
+      console.error('Failed to export PDF:', err);
+      alert('Could not export PDF directly. Please use Print Statement and select Save as PDF.');
+    } finally {
+      setIsGeneratingPdf(false);
     }
-  </style>
-</head>
-<body class="bg-white p-8 font-sans text-slate-900">
-  ${element.innerHTML}
-  <script>
-    window.onload = function() { window.print(); }
-  </script>
-</body>
-</html>`;
-
-    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `Statement_${customer.name.replace(/[^a-zA-Z0-9]/g, '_')}_${dateRange?.startDate || 'All'}_to_${dateRange?.endDate || 'Now'}.html`;
-    link.click();
-    URL.revokeObjectURL(url);
   };
 
   const handleShareWhatsApp = () => {
@@ -73,9 +55,9 @@ export function CustomerStatementPrint({ customer, ledger, summary, shop, dateRa
       `Kindly clear pending dues via UPI: ${shop?.upi_id || 'Store UPI'}\n` +
       `Thank you for your business!`;
 
-    const cleanPhone = (customer.phone || '').replace(/[^0-9]/g, '');
-    const url = cleanPhone.length >= 10 
-      ? `https://wa.me/91${cleanPhone.slice(-10)}?text=${encodeURIComponent(text)}` 
+    const phone = (customer.phone || '').replace(/[^0-9]/g, '');
+    const url = phone.length >= 10 
+      ? `https://wa.me/91${phone.slice(-10)}?text=${encodeURIComponent(text)}` 
       : `https://wa.me/?text=${encodeURIComponent(text)}`;
     window.open(url, '_blank');
   };
@@ -112,14 +94,19 @@ export function CustomerStatementPrint({ customer, ledger, summary, shop, dateRa
             </button>
 
             <button
-              onClick={handleDownloadHtml}
+              onClick={handleDownloadPdf}
+              disabled={isGeneratingPdf}
               className={`px-3 py-2 rounded-xl border text-xs font-semibold flex items-center space-x-1.5 transition-all ${
                 isDark ? 'border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200' : 'border-slate-300 bg-white hover:bg-slate-50 text-slate-700'
-              }`}
-              title="Download Statement HTML/PDF File"
+              } ${isGeneratingPdf ? 'opacity-70 cursor-wait' : ''}`}
+              title="Download Official PDF Statement"
             >
-              <Download className="w-4 h-4 text-sky-500" />
-              <span>Download Statement</span>
+              {isGeneratingPdf ? (
+                <div className="w-4 h-4 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Download className="w-4 h-4 text-sky-500" />
+              )}
+              <span>{isGeneratingPdf ? 'Saving PDF...' : 'Download PDF'}</span>
             </button>
 
             <button

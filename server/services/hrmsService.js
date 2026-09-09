@@ -1247,12 +1247,35 @@ export function toggleEmployeeStatus(employeeId) {
   };
 }
 
-export function deleteEmployee(employeeId) {
+import { moveToRecycleBin } from './recycleBinService.js';
+
+export function deleteEmployee(employeeId, user = null) {
   const db = getDb();
+  const emp = db.prepare(`SELECT * FROM employees WHERE id = ?`).get(employeeId);
+  if (!emp) {
+    throw new Error('Employee not found');
+  }
+
   // Check if employee is primary owner
   const empUser = db.prepare(`SELECT u.*, r.role_key FROM users u LEFT JOIN roles r ON u.role_id = r.id WHERE u.employee_id = ?`).get(employeeId);
   if (empUser && (empUser.role_id === 1 || empUser.role_key === 'SUPER_ADMIN' || empUser.role_key === 'owner')) {
     throw new Error('Action prohibited: The primary Shop Owner account cannot be deleted.');
+  }
+
+  // Archive to Recycle Bin (30-day retention)
+  try {
+    moveToRecycleBin({
+      shopId: emp.shop_id || 1,
+      itemType: 'EMPLOYEE',
+      originalId: emp.id,
+      title: `Employee: ${emp.full_name}`,
+      subtitle: `Code: ${emp.employee_code} • ${emp.designation} (${emp.department}) • Phone: ${emp.phone}`,
+      data: emp,
+      userId: user?.id || null,
+      userName: user?.displayName || user?.username || 'Store Admin'
+    });
+  } catch (archiveErr) {
+    console.warn('Failed to archive employee to recycle bin:', archiveErr.message);
   }
 
   // Delete associated user login if any
@@ -1263,5 +1286,5 @@ export function deleteEmployee(employeeId) {
   db.prepare(`DELETE FROM payroll_runs WHERE employee_id = ?`).run(employeeId);
   db.prepare(`DELETE FROM employees WHERE id = ?`).run(employeeId);
 
-  return { success: true, message: 'Employee profile and linked credentials removed successfully.' };
+  return { success: true, message: `Employee "${emp.full_name}" moved to Recycle Bin (retained for 30 days).` };
 }

@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTheme } from '../../context/ThemeContext';
 import { numberToIndianWords } from '../../utils/numberToWords';
 import { Printer, X, FileSpreadsheet, Share2, Download, Building2, User, Calendar, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { exportElementToPdf } from '../../utils/pdfExport';
 
 export function SalarySlipPrint({ payrollRecord, shop, onClose }) {
   const { isDark } = useTheme();
@@ -44,42 +45,19 @@ export function SalarySlipPrint({ payrollRecord, shop, onClose }) {
     window.open(url, '_blank');
   };
 
-  const handleDownloadHtml = () => {
-    const element = document.getElementById('printable-salary-slip');
-    if (!element) return;
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
-    const htmlContent = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>Salary Slip - ${payrollRecord.employee_code} - ${payrollRecord.month_year}</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    @media print {
-      @page { size: A4 portrait; margin: 10mm; }
-      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: #fff !important; }
-      .print\\:hidden { display: none !important; }
+  const handleDownloadPdf = async () => {
+    try {
+      setIsGeneratingPdf(true);
+      const filename = `SalarySlip_${payrollRecord.employee_code}_${payrollRecord.month_year}.pdf`;
+      await exportElementToPdf('printable-salary-slip', filename, { scale: 2, margin: 6 });
+    } catch (err) {
+      console.error('Failed to export PDF:', err);
+      alert('Could not export PDF directly. Please use the Print option and choose Save as PDF.');
+    } finally {
+      setIsGeneratingPdf(false);
     }
-  </style>
-</head>
-<body class="bg-white p-8 font-sans text-slate-900 flex justify-center">
-  <div style="width: 750px;">
-    ${element.innerHTML}
-  </div>
-  <script>
-    window.onload = function() { window.print(); }
-  </script>
-</body>
-</html>`;
-
-    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `SalarySlip_${payrollRecord.employee_code}_${payrollRecord.month_year}.html`;
-    link.click();
-    URL.revokeObjectURL(url);
   };
 
   return (
@@ -127,14 +105,19 @@ export function SalarySlipPrint({ payrollRecord, shop, onClose }) {
             </button>
 
             <button
-              onClick={handleDownloadHtml}
+              onClick={handleDownloadPdf}
+              disabled={isGeneratingPdf}
               className={`px-2.5 py-1.5 rounded-xl border text-xs font-semibold flex items-center space-x-1.5 transition-all ${
                 isDark ? 'border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200' : 'border-slate-300 bg-white hover:bg-slate-50 text-slate-700'
-              }`}
-              title="Download standalone payslip HTML"
+              } ${isGeneratingPdf ? 'opacity-70 cursor-wait' : ''}`}
+              title="Download official PDF salary payslip"
             >
-              <Download className="w-3.5 h-3.5 text-sky-500" />
-              <span>Download</span>
+              {isGeneratingPdf ? (
+                <div className="w-3.5 h-3.5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Download className="w-3.5 h-3.5 text-purple-500" />
+              )}
+              <span>{isGeneratingPdf ? 'Saving PDF...' : 'Download PDF'}</span>
             </button>
 
             <button

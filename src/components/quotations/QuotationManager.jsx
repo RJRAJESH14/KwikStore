@@ -98,6 +98,9 @@ export function QuotationManager() {
   });
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [dateFilter, setDateFilter] = useState('ALL'); // 'ALL', 'TODAY', 'WEEKLY', 'MONTHLY', 'CUSTOM'
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
   const [loadingList, setLoadingList] = useState(false);
   const [notification, setNotification] = useState(null);
 
@@ -143,11 +146,31 @@ export function QuotationManager() {
   const [customerSearchQuery, setCustomerSearchQuery] = useState('');
   const [isCustomerDropdownOpen, setIsCustomerDropdownOpen] = useState(false);
 
+  // Calculate Date Range based on Filter
+  const getDateRange = (filter) => {
+    const today = new Date();
+    const todayStr = today.toISOString().slice(0, 10);
+    
+    if (filter === 'TODAY') {
+      return { dateFrom: todayStr, dateTo: todayStr };
+    } else if (filter === 'WEEKLY') {
+      const weekAgo = new Date();
+      weekAgo.setDate(today.getDate() - 7);
+      return { dateFrom: weekAgo.toISOString().slice(0, 10), dateTo: todayStr };
+    } else if (filter === 'MONTHLY') {
+      const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+      return { dateFrom: monthStart.toISOString().slice(0, 10), dateTo: todayStr };
+    } else if (filter === 'CUSTOM') {
+      return { dateFrom: customStartDate, dateTo: customEndDate };
+    }
+    return { dateFrom: '', dateTo: '' };
+  };
+
   useEffect(() => {
     loadQuotations();
     loadProducts();
     loadCustomers();
-  }, [activeShop, statusFilter]);
+  }, [activeShop, statusFilter, dateFilter, customStartDate, customEndDate]);
 
   const loadQuotations = async () => {
     if (!activeShop) return;
@@ -156,6 +179,11 @@ export function QuotationManager() {
       let url = `/api/quotations?shopId=${activeShop.id}`;
       if (statusFilter !== 'ALL') url += `&status=${statusFilter}`;
       if (searchTerm) url += `&search=${encodeURIComponent(searchTerm)}`;
+      
+      const { dateFrom, dateTo } = getDateRange(dateFilter);
+      if (dateFrom) url += `&dateFrom=${dateFrom}`;
+      if (dateTo) url += `&dateTo=${dateTo}`;
+
       const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
@@ -706,41 +734,98 @@ export function QuotationManager() {
               </div>
             </div>
 
-            {/* Search & Status Filters */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-              <div className="relative flex-1 max-w-md">
+            {/* Search, Date & Status Filters */}
+            <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+              {/* Search Bar */}
+              <div className="relative flex-1 max-w-xs">
                 <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && loadQuotations()}
-                  placeholder="Search quotation #, customer, phone, GSTIN..."
+                  placeholder="Search quotation #, customer, phone..."
                   className={`w-full border rounded-xl pl-9 pr-3 py-2 text-xs outline-none focus:border-cyan-500 transition-all ${
                     isDark ? 'bg-slate-900 border-slate-800 text-white placeholder-slate-500' : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'
                   }`}
                 />
               </div>
 
-              <div className="flex items-center space-x-2">
-                <Filter className="w-3.5 h-3.5 text-slate-400" />
-                <span className="text-xs text-slate-400">Status:</span>
-                <div className={`flex items-center border rounded-lg p-0.5 ${
-                  isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-300'
-                }`}>
-                  {['ALL', 'DRAFT', 'SENT', 'ACCEPTED', 'CONVERTED'].map((st) => (
-                    <button
-                      key={st}
-                      onClick={() => setStatusFilter(st)}
-                      className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-all ${
-                        statusFilter === st
-                          ? 'bg-cyan-600 text-white shadow-sm'
-                          : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
+              {/* Date & Status Filter Group */}
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Date Filter Pills */}
+                <div className="flex items-center space-x-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-cyan-500" />
+                  <span className="text-xs text-slate-400 font-medium">Date:</span>
+                  <div className={`flex items-center border rounded-lg p-0.5 ${
+                    isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-300'
+                  }`}>
+                    {[
+                      { id: 'ALL', label: 'All Time' },
+                      { id: 'TODAY', label: 'Today' },
+                      { id: 'WEEKLY', label: 'Weekly' },
+                      { id: 'MONTHLY', label: 'Monthly' },
+                      { id: 'CUSTOM', label: 'Custom' }
+                    ].map((d) => (
+                      <button
+                        key={d.id}
+                        onClick={() => setDateFilter(d.id)}
+                        className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-all ${
+                          dateFilter === d.id
+                            ? 'bg-gradient-to-r from-cyan-600 to-cyan-500 text-white shadow-sm'
+                            : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        {d.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Custom Date Pickers (Shown only when 'CUSTOM' is selected) */}
+                {dateFilter === 'CUSTOM' && (
+                  <div className="flex items-center space-x-1.5 animate-in fade-in">
+                    <input
+                      type="date"
+                      value={customStartDate}
+                      onChange={(e) => setCustomStartDate(e.target.value)}
+                      className={`px-2 py-1 rounded-lg border text-xs font-mono outline-none ${
+                        isDark ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-300 text-slate-900'
                       }`}
-                    >
-                      {st}
-                    </button>
-                  ))}
+                    />
+                    <span className="text-xs text-slate-400">to</span>
+                    <input
+                      type="date"
+                      value={customEndDate}
+                      onChange={(e) => setCustomEndDate(e.target.value)}
+                      className={`px-2 py-1 rounded-lg border text-xs font-mono outline-none ${
+                        isDark ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-300 text-slate-900'
+                      }`}
+                    />
+                  </div>
+                )}
+
+                {/* Status Filter Pills */}
+                <div className="flex items-center space-x-1.5">
+                  <Filter className="w-3.5 h-3.5 text-slate-400" />
+                  <span className="text-xs text-slate-400 font-medium">Status:</span>
+                  <div className={`flex items-center border rounded-lg p-0.5 ${
+                    isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-300'
+                  }`}>
+                    {['ALL', 'DRAFT', 'SENT', 'ACCEPTED', 'CONVERTED'].map((st) => (
+                      <button
+                        key={st}
+                        onClick={() => setStatusFilter(st)}
+                        className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-all ${
+                          statusFilter === st
+                            ? 'bg-cyan-600 text-white shadow-sm'
+                            : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        {st}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>

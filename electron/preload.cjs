@@ -7,6 +7,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   checkForUpdates: () => ipcRenderer.invoke('check-update'),
   downloadUpdate: () => ipcRenderer.invoke('download-update'),
   installUpdate: () => ipcRenderer.invoke('install-update'),
+  getSystemPrinters: () => ipcRenderer.invoke('get-system-printers'),
+  printToDevice: (options) => ipcRenderer.invoke('print-to-device', options),
   onDownloadProgress: (callback) => {
     const listener = (_e, value) => callback(value);
     ipcRenderer.on('update-download-progress', listener);

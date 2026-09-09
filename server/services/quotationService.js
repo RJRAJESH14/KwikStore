@@ -6,24 +6,32 @@ export function getNextQuotationNumber(shopId) {
   const shop = db.prepare(`SELECT invoice_prefix FROM shops WHERE id = ?`).get(shopId) || { invoice_prefix: 'QT' };
   const prefix = shop.invoice_prefix ? `QT-${shop.invoice_prefix}` : 'QT';
   const year = new Date().getFullYear();
+  const pattern = `${prefix}-${year}-%`;
   
-  const lastQuotation = db.prepare(`
+  const rows = db.prepare(`
     SELECT quotation_number FROM quotations
     WHERE shop_id = ? AND quotation_number LIKE ?
-    ORDER BY id DESC LIMIT 1
-  `).get(shopId, `${prefix}-${year}-%`);
+  `).all(shopId, pattern);
 
-  let nextSeq = 1;
-  if (lastQuotation && lastQuotation.quotation_number) {
-    const parts = lastQuotation.quotation_number.split('-');
-    const lastNum = parseInt(parts[parts.length - 1], 10);
-    if (!isNaN(lastNum)) {
-      nextSeq = lastNum + 1;
+  let maxSeq = 0;
+  for (const row of rows) {
+    if (row.quotation_number) {
+      const match = row.quotation_number.match(/-(\d+)$/);
+      if (match && match[1]) {
+        const num = parseInt(match[1], 10);
+        if (!isNaN(num) && num > maxSeq) maxSeq = num;
+      }
     }
   }
 
-  const paddedSeq = String(nextSeq).padStart(4, '0');
-  return `${prefix}-${year}-${paddedSeq}`;
+  let nextSeq = maxSeq + 1;
+  let candidate = `${prefix}-${year}-${String(nextSeq).padStart(4, '0')}`;
+  const checkExists = db.prepare(`SELECT id FROM quotations WHERE shop_id = ? AND quotation_number = ? LIMIT 1`);
+  while (checkExists.get(shopId, candidate)) {
+    nextSeq++;
+    candidate = `${prefix}-${year}-${String(nextSeq).padStart(4, '0')}`;
+  }
+  return candidate;
 }
 
 export function getQuotations(shopId, search = '', status = 'ALL', dateFrom = '', dateTo = '') {

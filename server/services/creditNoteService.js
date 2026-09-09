@@ -3,19 +3,32 @@ import { getDb } from '../database/db.js';
 export function getNextCreditNoteNumber(shopId) {
   const db = getDb();
   const year = new Date().getFullYear();
-  const last = db.prepare(`
+  const pattern = `CN-${year}-%`;
+
+  const rows = db.prepare(`
     SELECT credit_note_no FROM credit_notes
     WHERE shop_id = ? AND credit_note_no LIKE ?
-    ORDER BY id DESC LIMIT 1
-  `).get(shopId, `CN-${year}-%`);
+  `).all(shopId, pattern);
 
-  let nextSeq = 1;
-  if (last && last.credit_note_no) {
-    const parts = last.credit_note_no.split('-');
-    const num = parseInt(parts[parts.length - 1], 10);
-    if (!isNaN(num)) nextSeq = num + 1;
+  let maxSeq = 0;
+  for (const row of rows) {
+    if (row.credit_note_no) {
+      const match = row.credit_note_no.match(/-(\d+)$/);
+      if (match && match[1]) {
+        const num = parseInt(match[1], 10);
+        if (!isNaN(num) && num > maxSeq) maxSeq = num;
+      }
+    }
   }
-  return `CN-${year}-${String(nextSeq).padStart(4, '0')}`;
+
+  let nextSeq = maxSeq + 1;
+  let candidate = `CN-${year}-${String(nextSeq).padStart(4, '0')}`;
+  const checkExists = db.prepare(`SELECT id FROM credit_notes WHERE shop_id = ? AND credit_note_no = ? LIMIT 1`);
+  while (checkExists.get(shopId, candidate)) {
+    nextSeq++;
+    candidate = `CN-${year}-${String(nextSeq).padStart(4, '0')}`;
+  }
+  return candidate;
 }
 
 export function createCreditNote(data) {

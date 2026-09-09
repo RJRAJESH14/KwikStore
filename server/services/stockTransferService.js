@@ -8,13 +8,32 @@ import { getDb } from '../database/db.js';
 function generateNextTransferNumber() {
   const db = getDb();
   const year = new Date().getFullYear();
-  const last = db.prepare(`
-    SELECT id, transfer_number FROM stock_transfers 
-    ORDER BY id DESC LIMIT 1
-  `).get();
+  const pattern = `DC-${year}-%`;
 
-  const nextSeq = (last ? last.id : 0) + 1;
-  return `DC-${year}-${String(nextSeq).padStart(4, '0')}`;
+  const rows = db.prepare(`
+    SELECT transfer_number FROM stock_transfers 
+    WHERE transfer_number LIKE ?
+  `).all(pattern);
+
+  let maxSeq = 0;
+  for (const row of rows) {
+    if (row.transfer_number) {
+      const match = row.transfer_number.match(/-(\d+)$/);
+      if (match && match[1]) {
+        const num = parseInt(match[1], 10);
+        if (!isNaN(num) && num > maxSeq) maxSeq = num;
+      }
+    }
+  }
+
+  let nextSeq = maxSeq + 1;
+  let candidate = `DC-${year}-${String(nextSeq).padStart(4, '0')}`;
+  const checkExists = db.prepare(`SELECT id FROM stock_transfers WHERE transfer_number = ? LIMIT 1`);
+  while (checkExists.get(candidate)) {
+    nextSeq++;
+    candidate = `DC-${year}-${String(nextSeq).padStart(4, '0')}`;
+  }
+  return candidate;
 }
 
 // Create & Dispatch Stock Transfer (Deducts stock from source shop)

@@ -5,25 +5,46 @@ import * as creditNoteService from './creditNoteService.js';
 export function getNextInvoiceNumber(shopId) {
   const db = getDb();
   const shop = db.prepare(`SELECT invoice_prefix FROM shops WHERE id = ?`).get(shopId) || { invoice_prefix: 'INV' };
+  const prefix = shop.invoice_prefix || 'INV';
   const year = new Date().getFullYear();
-  
-  const lastInvoice = db.prepare(`
+  const pattern = `${prefix}-${year}-%`;
+
+  // Fetch all existing invoice numbers for this shop and year prefix to find the true max sequence
+  const rows = db.prepare(`
     SELECT invoice_number FROM invoices
     WHERE shop_id = ? AND invoice_number LIKE ?
-    ORDER BY id DESC LIMIT 1
-  `).get(shopId, `${shop.invoice_prefix}-${year}-%`);
+  `).all(shopId, pattern);
 
-  let nextSeq = 1;
-  if (lastInvoice && lastInvoice.invoice_number) {
-    const parts = lastInvoice.invoice_number.split('-');
-    const lastNum = parseInt(parts[parts.length - 1], 10);
-    if (!isNaN(lastNum)) {
-      nextSeq = lastNum + 1;
+  let maxSeq = 0;
+  for (const row of rows) {
+    if (row.invoice_number) {
+      const match = row.invoice_number.match(/-(\d+)(?:-R\d+)?$/);
+      if (match && match[1]) {
+        const num = parseInt(match[1], 10);
+        if (!isNaN(num) && num > maxSeq) {
+          maxSeq = num;
+        }
+      } else {
+        const parts = row.invoice_number.split('-');
+        const lastNum = parseInt(parts[parts.length - 1], 10);
+        if (!isNaN(lastNum) && lastNum > maxSeq) {
+          maxSeq = lastNum;
+        }
+      }
     }
   }
 
-  const paddedSeq = String(nextSeq).padStart(4, '0');
-  return `${shop.invoice_prefix}-${year}-${paddedSeq}`;
+  let nextSeq = maxSeq + 1;
+  let candidate = `${prefix}-${year}-${String(nextSeq).padStart(4, '0')}`;
+
+  // Collision-guard: ensure generated candidate number does not exist
+  const checkExists = db.prepare(`SELECT id FROM invoices WHERE shop_id = ? AND invoice_number = ? LIMIT 1`);
+  while (checkExists.get(shopId, candidate)) {
+    nextSeq++;
+    candidate = `${prefix}-${year}-${String(nextSeq).padStart(4, '0')}`;
+  }
+
+  return candidate;
 }
 
 export function createInvoice(invoiceData) {

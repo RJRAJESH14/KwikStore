@@ -448,6 +448,7 @@ export function PosBilling() {
   const maxCreditDiscount = Math.max(0, taxableTotal - loyaltyDiscount);
   const creditNoteDiscount = appliedCreditNote ? Math.min(appliedCreditNote.balance, maxCreditDiscount) : 0;
 
+  const totalTax = cart.reduce((acc, item) => acc + (Number(item.tax_amount) || 0), 0);
   const grandTotal = Math.max(0, Math.round(taxableTotal - loyaltyDiscount - creditNoteDiscount));
   const totalCartQuantity = cart.reduce((sum, item) => sum + (Number(item.quantity) || 0) + (Number(item.free_quantity) || 0), 0);
 

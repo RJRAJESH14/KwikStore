@@ -461,17 +461,41 @@ export function PosBilling() {
   // Broadcast live cart state to Customer Facing Display (CFD)
   useEffect(() => {
     if (!updateCustomerDisplay) return;
-    const totalSavings = (cart.reduce((sum, item) => sum + (Number(item.discount_amount || 0)), 0)) + loyaltyDiscount + creditNoteDiscount;
+    const itemDiscount = cart.reduce((sum, item) => sum + (Number(item.discount_amount || 0)), 0);
+    const totalSavings = itemDiscount + loyaltyDiscount + creditNoteDiscount;
+    const subTotalAmount = cart.reduce((sum, item) => sum + ((Number(item.quantity) || 0) * (Number(item.unit_price) || 0)), 0);
+
     updateCustomerDisplay({
       cart,
+      itemCount: cart.length,
+      totalUnits: totalCartQuantity,
+      subTotal: subTotalAmount,
       total: grandTotal,
+      itemDiscount,
+      loyaltyDiscount,
+      creditNoteDiscount,
       totalSavings,
-      customerName: selectedCustomer?.name,
+      totalTax,
+      customer: selectedCustomer ? {
+        id: selectedCustomer.id,
+        name: selectedCustomer.name,
+        phone: selectedCustomer.phone,
+        customer_type: selectedCustomer.customer_type,
+        loyalty_points: selectedCustomer.loyalty_points,
+        current_balance: selectedCustomer.current_balance
+      } : null,
+      customerName: selectedCustomer?.name || '',
+      customerPhone: selectedCustomer?.phone || '',
+      isTenderOpen,
+      paymentMode,
+      cashTendered: parseFloat(cashTendered) || 0,
+      changeDue: Math.max(0, (parseFloat(cashTendered) || 0) - grandTotal),
+      splitAmounts: paymentMode === 'SPLIT' ? splitAmounts : null,
       upiQrUrl: isTenderOpen && paymentMode === 'UPI' ? upiQrUrl : null,
-      status: isTenderOpen ? (paymentMode === 'UPI' ? 'PAYMENT' : 'ACTIVE') : cart.length > 0 ? 'ACTIVE' : 'IDLE',
+      status: isTenderOpen ? (paymentMode === 'UPI' ? 'PAYMENT' : 'TENDER') : cart.length > 0 ? 'ACTIVE' : 'IDLE',
       shop: activeShop
     });
-  }, [cart, grandTotal, selectedCustomer, isTenderOpen, paymentMode, upiQrUrl, loyaltyDiscount, creditNoteDiscount, activeShop, updateCustomerDisplay]);
+  }, [cart, grandTotal, totalCartQuantity, totalTax, selectedCustomer, isTenderOpen, paymentMode, cashTendered, splitAmounts, upiQrUrl, loyaltyDiscount, creditNoteDiscount, activeShop, updateCustomerDisplay]);
 
   // Grab electronic weighing scale weight into a cart item
   const applyScaleWeightToCart = (index) => {

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, shell, dialog, ipcMain } = require('electron');
+const { app, BrowserWindow, Menu, shell, dialog, ipcMain, screen } = require('electron');
 const path = require('path');
 const fs = require('fs');
 let autoUpdater = null;
@@ -20,10 +20,57 @@ process.on('uncaughtException', (err) => {
 });
 
 let mainWindow = null;
+let cfdWindow = null;
 let serverStarted = false;
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 const SERVER_PORT = 4848;
+
+function openCfdWindow(customUrl) {
+  if (cfdWindow && !cfdWindow.isDestroyed()) {
+    cfdWindow.show();
+    cfdWindow.focus();
+    return cfdWindow;
+  }
+
+  // Detect secondary display for dual-monitor customer-facing setup
+  const displays = screen.getAllDisplays();
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const secondaryDisplay = displays.find(d => d.id !== primaryDisplay.id);
+
+  let windowOptions = {
+    width: 1024,
+    height: 768,
+    minWidth: 800,
+    minHeight: 600,
+    title: 'KwikStore Pro - Customer Facing Display (CFD)',
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.cjs')
+    },
+    icon: process.platform === 'win32'
+      ? path.join(__dirname, '..', 'build', 'icon.ico')
+      : path.join(__dirname, '..', 'build', 'icon.png')
+  };
+
+  if (secondaryDisplay) {
+    // Position on secondary customer-facing monitor automatically
+    windowOptions.x = secondaryDisplay.bounds.x + 40;
+    windowOptions.y = secondaryDisplay.bounds.y + 40;
+  }
+
+  cfdWindow = new BrowserWindow(windowOptions);
+
+  const targetUrl = customUrl || (isDev ? 'http://localhost:5173/customer-display' : `http://localhost:${SERVER_PORT}/customer-display`);
+  cfdWindow.loadURL(targetUrl);
+
+  cfdWindow.on('closed', () => {
+    cfdWindow = null;
+  });
+
+  return cfdWindow;
+}
 
 async function startBackendServer() {
   if (serverStarted) return;
@@ -90,12 +137,20 @@ function createWindow() {
   }
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.includes('customer-display') || url.includes('/cfd')) {
+      openCfdWindow(url);
+      return { action: 'deny' };
+    }
+
     shell.openExternal(url);
     return { action: 'deny' };
   });
 
   mainWindow.on('closed', () => {
     mainWindow = null;
+    if (cfdWindow && !cfdWindow.isDestroyed()) {
+      cfdWindow.close();
+    }
   });
 
   createApplicationMenu();
@@ -217,6 +272,12 @@ app.whenReady().then(async () => {
       }
     });
   }
+
+  // Customer Facing Display (CFD) IPC Handler
+  ipcMain.handle('open-cfd-window', () => {
+    openCfdWindow();
+    return { success: true };
+  });
 
   // Hardware & Printer IPC Handlers
   ipcMain.handle('get-system-printers', async () => {

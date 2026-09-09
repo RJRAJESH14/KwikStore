@@ -193,7 +193,11 @@ export function Navbar({ onOpenDatabaseHub, onOpenShopSettings, onOpenLoginModal
         {/* Customer Facing Display (CFD) Secondary Screen */}
         <button
           onClick={() => {
-            window.open('/customer-display', 'KwikStoreCustomerDisplay', 'width=1024,height=768,menubar=no,toolbar=no,location=no');
+            if (window.electronAPI && typeof window.electronAPI.openCfdWindow === 'function') {
+              window.electronAPI.openCfdWindow();
+            } else {
+              window.open('/customer-display', 'KwikStoreCustomerDisplay', 'width=1024,height=768,menubar=no,toolbar=no,location=no');
+            }
           }}
           className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors ${
             isDark

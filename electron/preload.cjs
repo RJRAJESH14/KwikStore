@@ -2,8 +2,9 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
   platform: process.platform,
-  version: '1.1.0',
+  version: '1.2.0',
   isElectron: true,
+  openCfdWindow: () => ipcRenderer.invoke('open-cfd-window'),
   checkForUpdates: () => ipcRenderer.invoke('check-update'),
   downloadUpdate: () => ipcRenderer.invoke('download-update'),
   installUpdate: () => ipcRenderer.invoke('install-update'),

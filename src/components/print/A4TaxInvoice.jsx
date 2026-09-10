@@ -108,7 +108,8 @@ export function A4TaxInvoice({ invoice, onClose, onPrint, onSwitchToThermal }) {
       const filename = `Invoice_${invoice.invoice_number}_${(invoice.customer_name || 'Customer').replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
       await exportElementToPdf('printable-a4-invoice', filename, {
         scale: 2,
-        margin: 4
+        margin: 4,
+        fitToSinglePage: true
       });
     } catch (err) {
       console.error('Failed to export PDF:', err);
@@ -255,7 +256,7 @@ export function A4TaxInvoice({ invoice, onClose, onPrint, onSwitchToThermal }) {
         }`}>
           <div 
             id="printable-a4-invoice" 
-            className="w-[794px] bg-white text-slate-900 p-6 rounded-xl shadow-2xl text-xs font-sans border border-slate-300 space-y-3.5 print:p-0 print:border-none print:shadow-none"
+            className="w-[794px] bg-white text-slate-900 p-5 rounded-xl shadow-2xl text-xs font-sans border border-slate-300 space-y-3 print:p-0 print:border-none print:shadow-none"
           >
             
             {/* Top Header Badge & Company Details */}
@@ -588,7 +589,7 @@ export function A4TaxInvoice({ invoice, onClose, onPrint, onSwitchToThermal }) {
             </div>
 
             {/* Signature & Watermark Footer */}
-            <div className="flex justify-between items-end pt-6 border-t border-slate-200">
+            <div className="flex justify-between items-end pt-3 border-t border-slate-200">
               <div className="text-[10px] text-slate-500 space-y-0.5">
                 <div className="font-bold text-slate-700">Thank you for your business!</div>
                 <div>Generated via KwikStore Pro • Universal POS & Retail Engine</div>
@@ -596,7 +597,7 @@ export function A4TaxInvoice({ invoice, onClose, onPrint, onSwitchToThermal }) {
 
               <div className="text-center">
                 <div className="font-bold text-slate-900 text-xs">For {invoice.shop_name}</div>
-                <div className="h-10 flex items-center justify-center">
+                <div className="h-8 flex items-center justify-center">
                   <span className="text-[9px] text-slate-400 italic">[Digitally Generated Signature]</span>
                 </div>
                 <div className="border-t border-slate-400 pt-1 text-[10px] text-slate-700 font-bold px-6">

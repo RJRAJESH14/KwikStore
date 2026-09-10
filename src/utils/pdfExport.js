@@ -54,24 +54,51 @@ export async function exportElementToPdf(elementIdOrNode, filename = 'document.p
     const margin = options.margin !== undefined ? options.margin : 5; // 5mm margin
     const printableWidth = pageWidth - (margin * 2);
     const printableHeight = (canvas.height * printableWidth) / canvas.width;
+    const availableHeight = pageHeight - (margin * 2);
 
-    // Check if content fits in one page or needs multi-page pagination
-    if (printableHeight <= pageHeight - (margin * 2)) {
-      pdf.addImage(imgData, 'PNG', margin, margin, printableWidth, printableHeight);
+    // If fitToSinglePage is requested or content is within reasonable range (~1.3x), scale proportionally to fit 1 page
+    const shouldFitSinglePage = options.fitToSinglePage !== undefined 
+      ? options.fitToSinglePage 
+      : (printableHeight <= availableHeight * 1.3);
+
+    if (shouldFitSinglePage || printableHeight <= availableHeight) {
+      // Proportional scale factor to fit all content (including bottom totals and signature) completely
+      const scaleFactor = Math.min(1, availableHeight / printableHeight, printableWidth / printableWidth);
+      const finalWidth = printableWidth * scaleFactor;
+      const finalHeight = printableHeight * scaleFactor;
+      const xOffset = margin + (printableWidth - finalWidth) / 2;
+      const yOffset = margin;
+
+      pdf.addImage(imgData, 'PNG', xOffset, yOffset, finalWidth, finalHeight);
     } else {
-      let currentHeightLeft = printableHeight;
-      let position = margin;
+      // Sliced multi-page pagination for genuinely long multi-item invoices
+      const pageCanvasHeight = (availableHeight * canvas.width) / printableWidth;
+      let renderedHeight = 0;
+      let pageIndex = 0;
 
-      // First page
-      pdf.addImage(imgData, 'PNG', margin, position, printableWidth, printableHeight);
-      currentHeightLeft -= (pageHeight - (margin * 2));
+      while (renderedHeight < canvas.height) {
+        if (pageIndex > 0) pdf.addPage();
 
-      // Subsequent pages if long invoice
-      while (currentHeightLeft > 0) {
-        position -= (pageHeight - (margin * 2));
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', margin, position, printableWidth, printableHeight);
-        currentHeightLeft -= (pageHeight - (margin * 2));
+        const sliceCanvas = document.createElement('canvas');
+        sliceCanvas.width = canvas.width;
+        const currentSliceHeight = Math.min(pageCanvasHeight, canvas.height - renderedHeight);
+        sliceCanvas.height = currentSliceHeight;
+
+        const sliceCtx = sliceCanvas.getContext('2d');
+        sliceCtx.fillStyle = '#ffffff';
+        sliceCtx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
+        sliceCtx.drawImage(
+          canvas,
+          0, renderedHeight, canvas.width, currentSliceHeight,
+          0, 0, sliceCanvas.width, currentSliceHeight
+        );
+
+        const sliceData = sliceCanvas.toDataURL('image/png');
+        const slicePrintHeight = (currentSliceHeight * printableWidth) / canvas.width;
+
+        pdf.addImage(sliceData, 'PNG', margin, margin, printableWidth, slicePrintHeight);
+        renderedHeight += currentSliceHeight;
+        pageIndex++;
       }
     }
 

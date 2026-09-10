@@ -71,13 +71,15 @@ export function BarcodeSvg({
   return (
     <div className={`inline-flex flex-col items-center select-none bg-white p-1 rounded ${className}`}>
       <svg
+        xmlns="http://www.w3.org/2000/svg"
         width={svgWidth}
         height={svgHeight}
         viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-        className="overflow-visible"
+        className="overflow-visible block"
         shapeRendering="crispEdges"
+        style={{ width: `${svgWidth}px`, height: `${svgHeight}px`, display: 'block' }}
       >
-        <rect width={svgWidth} height={svgHeight} fill="#ffffff" />
+        <rect width={svgWidth} height={svgHeight} fill="#ffffff" style={{ fill: '#ffffff' }} />
         {rects.map((rect, idx) => (
           <rect
             key={idx}
@@ -86,6 +88,7 @@ export function BarcodeSvg({
             width={rect.width}
             height={svgHeight}
             fill="#000000"
+            style={{ fill: '#000000' }}
           />
         ))}
       </svg>

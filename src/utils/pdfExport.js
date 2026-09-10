@@ -18,6 +18,10 @@ export async function exportElementToPdf(elementIdOrNode, filename = 'document.p
   }
 
   try {
+    // Ensure full dimensions are measured accurately
+    const fullWidth = element.scrollWidth || element.offsetWidth || 794;
+    const fullHeight = element.scrollHeight || element.offsetHeight;
+
     // Generate high-resolution canvas with white background
     const canvas = await html2canvas(element, {
       scale: options.scale || 2,
@@ -25,15 +29,35 @@ export async function exportElementToPdf(elementIdOrNode, filename = 'document.p
       allowTaint: true,
       logging: false,
       backgroundColor: '#ffffff',
-      windowWidth: 1200,
+      width: fullWidth,
+      height: fullHeight,
+      windowWidth: fullWidth + 100,
+      windowHeight: fullHeight + 100,
+      scrollX: 0,
+      scrollY: 0,
+      x: 0,
+      y: 0,
       onclone: (clonedDoc) => {
         const id = typeof elementIdOrNode === 'string' ? elementIdOrNode : element?.id;
-        if (id) {
-          const clonedEl = clonedDoc.getElementById(id);
-          if (clonedEl) {
-            clonedEl.style.backgroundColor = '#ffffff';
-            clonedEl.style.color = '#0f172a';
-          }
+        const clonedEl = id ? clonedDoc.getElementById(id) : clonedDoc.body.querySelector(`#${element?.id || 'printable-a4-invoice'}`);
+        if (clonedEl) {
+          clonedEl.style.backgroundColor = '#ffffff';
+          clonedEl.style.color = '#0f172a';
+          clonedEl.style.height = 'auto';
+          clonedEl.style.maxHeight = 'none';
+          clonedEl.style.overflow = 'visible';
+          clonedEl.style.transform = 'none';
+          clonedEl.style.margin = '0';
+        }
+        
+        // Remove overflow and height restrictions from all parents in the cloned DOM tree
+        let parent = clonedEl?.parentElement;
+        while (parent && parent !== clonedDoc.body && parent !== clonedDoc.documentElement) {
+          parent.style.overflow = 'visible';
+          parent.style.maxHeight = 'none';
+          parent.style.height = 'auto';
+          parent.style.transform = 'none';
+          parent = parent.parentElement;
         }
       },
       ...options.canvasOptions

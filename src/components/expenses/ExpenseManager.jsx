@@ -131,6 +131,35 @@ export function ExpenseManager() {
     }
   };
 
+  const exportExpensesCsv = () => {
+    if (!expenses || expenses.length === 0) {
+      alert('No expense records to export.');
+      return;
+    }
+
+    const headers = ['Date', 'Title', 'Category', 'Paid To', 'Payment Mode', 'Created By', 'Amount (INR)', 'Notes'];
+    const rows = expenses.map(exp => [
+      `"${new Date(exp.expense_date).toLocaleDateString('en-IN')}"`,
+      `"${(exp.expense_title || '').replace(/"/g, '""')}"`,
+      `"${(exp.category || '').replace(/_/g, ' ')}"`,
+      `"${(exp.paid_to || '').replace(/"/g, '""')}"`,
+      `"${exp.payment_mode || 'CASH'}"`,
+      `"${(exp.created_by_name || 'Staff').replace(/"/g, '""')}"`,
+      Number(exp.amount || 0).toFixed(2),
+      `"${(exp.notes || '').replace(/"/g, '""')}"`
+    ]);
+
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `Store_Expenses_${activeShop?.name?.replace(/\s+/g, '_') || 'Shop'}_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="flex flex-col h-full overflow-hidden p-6 space-y-5">
       {/* Top Header */}
@@ -148,6 +177,17 @@ export function ExpenseManager() {
         </div>
 
         <div className="flex items-center space-x-2">
+          <button
+            onClick={exportExpensesCsv}
+            className={`px-3.5 py-2 rounded-xl border font-bold text-xs flex items-center space-x-1.5 transition-all ${
+              isDark ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-200' : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-700'
+            }`}
+            title="Export all expense records to CSV spreadsheet"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Export CSV</span>
+          </button>
+
           <button
             onClick={() => setIsAddModalOpen(true)}
             className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-lg shadow-rose-500/20 flex items-center space-x-1.5"

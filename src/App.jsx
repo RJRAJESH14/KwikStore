@@ -1,4 +1,4 @@
-import React, { useState, Component } from 'react';
+import React, { useState, Component, lazy, Suspense } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ShopProvider, useShop } from './context/ShopContext';
 import { NetworkProvider } from './context/NetworkContext';
@@ -6,25 +6,38 @@ import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { Navbar } from './components/layout/Navbar';
 import { Sidebar } from './components/layout/Sidebar';
 import { PosBilling } from './components/pos/PosBilling';
-import { InventoryManager } from './components/inventory/InventoryManager';
-import { CustomerKhata } from './components/khata/CustomerKhata';
-import { HrmsDashboard } from './components/hrms/HrmsDashboard';
-import { MultiShopManager } from './components/multishop/MultiShopManager';
-import { StaffRbacManager } from './components/staff/StaffRbacManager';
-import { ReportsView } from './components/reports/ReportsView';
-import { DatabaseHub } from './components/settings/DatabaseHub';
-import { ShopInvoiceSettings } from './components/settings/ShopInvoiceSettings';
-import LicenseSettings from './components/settings/LicenseSettings';
-import LicenseActivationModal from './components/license/LicenseActivationModal';
-import { SupplierManager } from './components/suppliers/SupplierManager';
-import { QuotationManager } from './components/quotations/QuotationManager';
-import { ExpenseManager } from './components/expenses/ExpenseManager';
-import { EWayBillsManager } from './components/eway/EWayBillsManager';
 import { LoginModal } from './components/auth/LoginModal';
 import { CustomerFacingDisplay } from './components/customer/CustomerFacingDisplay';
-import { RecycleBin } from './components/recycle_bin/RecycleBin';
-import { InvoiceDataView } from './components/invoices/InvoiceDataView';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import LicenseActivationModal from './components/license/LicenseActivationModal';
+import { AlertTriangle, RefreshCw, Loader2 } from 'lucide-react';
+
+// Code-split heavy secondary modules for high performance
+const InventoryManager = lazy(() => import('./components/inventory/InventoryManager').then(m => ({ default: m.InventoryManager })));
+const CustomerKhata = lazy(() => import('./components/khata/CustomerKhata').then(m => ({ default: m.CustomerKhata })));
+const HrmsDashboard = lazy(() => import('./components/hrms/HrmsDashboard').then(m => ({ default: m.HrmsDashboard })));
+const MultiShopManager = lazy(() => import('./components/multishop/MultiShopManager').then(m => ({ default: m.MultiShopManager })));
+const StaffRbacManager = lazy(() => import('./components/staff/StaffRbacManager').then(m => ({ default: m.StaffRbacManager })));
+const ReportsView = lazy(() => import('./components/reports/ReportsView').then(m => ({ default: m.ReportsView })));
+const DatabaseHub = lazy(() => import('./components/settings/DatabaseHub').then(m => ({ default: m.DatabaseHub })));
+const ShopInvoiceSettings = lazy(() => import('./components/settings/ShopInvoiceSettings').then(m => ({ default: m.ShopInvoiceSettings })));
+const LicenseSettings = lazy(() => import('./components/settings/LicenseSettings'));
+const SupplierManager = lazy(() => import('./components/suppliers/SupplierManager').then(m => ({ default: m.SupplierManager })));
+const QuotationManager = lazy(() => import('./components/quotations/QuotationManager').then(m => ({ default: m.QuotationManager })));
+const ExpenseManager = lazy(() => import('./components/expenses/ExpenseManager').then(m => ({ default: m.ExpenseManager })));
+const EWayBillsManager = lazy(() => import('./components/eway/EWayBillsManager').then(m => ({ default: m.EWayBillsManager })));
+const RecycleBin = lazy(() => import('./components/recycle_bin/RecycleBin').then(m => ({ default: m.RecycleBin })));
+const InvoiceDataView = lazy(() => import('./components/invoices/InvoiceDataView').then(m => ({ default: m.InvoiceDataView })));
+
+function ViewLoadingFallback({ isDark }) {
+  return (
+    <div className={`h-full w-full flex flex-col items-center justify-center p-8 space-y-3 ${
+      isDark ? 'bg-slate-950 text-slate-300' : 'bg-slate-50 text-slate-700'
+    }`}>
+      <Loader2 className="w-8 h-8 animate-spin text-brand-500 opacity-80" />
+      <span className="text-xs font-semibold tracking-wide">Loading module...</span>
+    </div>
+  );
+}
 
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -190,22 +203,24 @@ function MainLayout() {
         />
 
         <main className="flex-1 overflow-hidden relative">
-          {activeTab === 'pos' && <PosBilling />}
-          {activeTab === 'invoice_data' && (isOwner || hasPermission('pos:billing') ? <InvoiceDataView /> : <PosBilling />)}
-          {activeTab === 'inventory' && (isOwner || hasPermission('inventory:view') ? <InventoryManager /> : <PosBilling />)}
-          {activeTab === 'suppliers' && (isOwner || hasPermission('suppliers:view') ? <SupplierManager /> : <PosBilling />)}
-          {activeTab === 'khata' && (isOwner || hasPermission('customers:view') ? <CustomerKhata /> : <PosBilling />)}
-          {activeTab === 'quotations' && (isOwner || hasPermission('quotations:view') ? <QuotationManager /> : <PosBilling />)}
-          {activeTab === 'hrms' && (isOwner || hasPermission('hrms:view') ? <HrmsDashboard /> : <PosBilling />)}
-          {activeTab === 'multishop' && (isOwner || hasPermission('settings:multishop') ? <MultiShopManager /> : <PosBilling />)}
-          {activeTab === 'staff' && (isOwner || hasPermission('settings:rbac') ? <StaffRbacManager /> : <PosBilling />)}
-          {activeTab === 'expenses' && (isOwner || hasPermission('expenses:view') ? <ExpenseManager /> : <PosBilling />)}
-          {activeTab === 'reports' && (isOwner || hasPermission('reports:sales') ? <ReportsView /> : <PosBilling />)}
-          {activeTab === 'eway_bills' && (isOwner || hasPermission('reports:sales') ? <EWayBillsManager /> : <PosBilling />)}
-          {activeTab === 'settings' && (isOwner || hasPermission('settings:database_backup') ? <DatabaseHub /> : <PosBilling />)}
-          {activeTab === 'shop_settings' && (isOwner || hasPermission('settings:invoice') || hasPermission('settings:multishop') ? <ShopInvoiceSettings /> : <PosBilling />)}
-          {activeTab === 'license' && (isOwner || hasPermission('settings:license') ? <LicenseSettings /> : <PosBilling />)}
-          {activeTab === 'recycle_bin' && (isOwner || hasPermission('settings:database_backup') ? <RecycleBin /> : <PosBilling />)}
+          <Suspense fallback={<ViewLoadingFallback isDark={isDark} />}>
+            {activeTab === 'pos' && <PosBilling />}
+            {activeTab === 'invoice_data' && (isOwner || hasPermission('pos:billing') ? <InvoiceDataView /> : <PosBilling />)}
+            {activeTab === 'inventory' && (isOwner || hasPermission('inventory:view') ? <InventoryManager /> : <PosBilling />)}
+            {activeTab === 'suppliers' && (isOwner || hasPermission('suppliers:view') ? <SupplierManager /> : <PosBilling />)}
+            {activeTab === 'khata' && (isOwner || hasPermission('customers:view') ? <CustomerKhata /> : <PosBilling />)}
+            {activeTab === 'quotations' && (isOwner || hasPermission('quotations:view') ? <QuotationManager /> : <PosBilling />)}
+            {activeTab === 'hrms' && (isOwner || hasPermission('hrms:view') ? <HrmsDashboard /> : <PosBilling />)}
+            {activeTab === 'multishop' && (isOwner || hasPermission('settings:multishop') ? <MultiShopManager /> : <PosBilling />)}
+            {activeTab === 'staff' && (isOwner || hasPermission('settings:rbac') ? <StaffRbacManager /> : <PosBilling />)}
+            {activeTab === 'expenses' && (isOwner || hasPermission('expenses:view') ? <ExpenseManager /> : <PosBilling />)}
+            {activeTab === 'reports' && (isOwner || hasPermission('reports:sales') ? <ReportsView /> : <PosBilling />)}
+            {activeTab === 'eway_bills' && (isOwner || hasPermission('reports:sales') ? <EWayBillsManager /> : <PosBilling />)}
+            {activeTab === 'settings' && (isOwner || hasPermission('settings:database_backup') ? <DatabaseHub /> : <PosBilling />)}
+            {activeTab === 'shop_settings' && (isOwner || hasPermission('settings:invoice') || hasPermission('settings:multishop') ? <ShopInvoiceSettings /> : <PosBilling />)}
+            {activeTab === 'license' && (isOwner || hasPermission('settings:license') ? <LicenseSettings /> : <PosBilling />)}
+            {activeTab === 'recycle_bin' && (isOwner || hasPermission('settings:database_backup') ? <RecycleBin /> : <PosBilling />)}
+          </Suspense>
         </main>
       </div>
 

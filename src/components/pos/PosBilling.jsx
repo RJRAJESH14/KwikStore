@@ -74,7 +74,26 @@ export function PosBilling() {
   const [employees, setEmployees] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
-  const [cart, setCart] = useState([]);
+  const [cart, setCart] = useState(() => {
+    try {
+      const saved = localStorage.getItem(`kwikstore_active_cart_${activeShop?.id || 1}`);
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  // Persist active cart in localStorage
+  useEffect(() => {
+    try {
+      if (cart && cart.length > 0) {
+        localStorage.setItem(`kwikstore_active_cart_${activeShop?.id || 1}`, JSON.stringify(cart));
+      } else {
+        localStorage.removeItem(`kwikstore_active_cart_${activeShop?.id || 1}`);
+      }
+    } catch (e) {}
+  }, [cart, activeShop?.id]);
+
   const [isCartModalOpen, setIsCartModalOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [overallDiscount, setOverallDiscount] = useState(0);
@@ -153,7 +172,22 @@ export function PosBilling() {
   const [upiQrUrl, setUpiQrUrl] = useState(null);
   const [heldBills, setHeldBills] = useState([]);
   const [recentInvoice, setRecentInvoice] = useState(null);
-  const [printFormat, setPrintFormat] = useState('THERMAL'); // THERMAL or A4
+
+  // Preferred print format memory (THERMAL vs A4)
+  const [printFormat, setPrintFormat] = useState(() => {
+    try {
+      return localStorage.getItem('pos_preferred_print_format') || 'THERMAL';
+    } catch (e) {
+      return 'THERMAL';
+    }
+  });
+
+  const updatePrintFormat = (fmt) => {
+    setPrintFormat(fmt);
+    try {
+      localStorage.setItem('pos_preferred_print_format', fmt);
+    } catch (e) {}
+  };
 
   const searchInputRef = useRef(null);
 
@@ -283,41 +317,78 @@ export function PosBilling() {
     setSearchResults(filtered.slice(0, 10));
   }, [searchQuery, products]);
 
-  // Global Keyboard Shortcuts (F2-F10)
+  // Global Keyboard Shortcuts (F2-F12, Esc)
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'F2') {
+        // F2: Focus Search / Barcode Bar
         e.preventDefault();
-        setCart([]);
-        setSelectedCustomer(null);
-        setSearchQuery('');
         searchInputRef.current?.focus();
+        searchInputRef.current?.select();
       } else if (e.key === 'F3') {
+        // F3: Customer Search & Attach
         e.preventDefault();
-        searchInputRef.current?.focus();
+        setIsCustomerSearchModalOpen(true);
       } else if (e.key === 'F4') {
+        // F4: Cycle Price Tier (Retail / Wholesale / Dealer / MRP)
         e.preventDefault();
-        if (cart.length > 0) openTenderModal();
+        setPriceTier(prev => {
+          if (prev === 'RETAIL') return 'WHOLESALE';
+          if (prev === 'WHOLESALE') return 'DEALER';
+          if (prev === 'DEALER') return 'MRP';
+          return 'RETAIL';
+        });
       } else if (e.key === 'F6') {
+        // F6: Customer Returns
         e.preventDefault();
         setIsReturnsModalOpen(true);
       } else if (e.key === 'F7') {
+        // F7: Shift Register
         e.preventDefault();
         setIsShiftModalOpen(true);
       } else if (e.key === 'F8') {
+        // F8: Instant Cash Tender
         e.preventDefault();
-        handleHoldBill();
+        if (cart.length > 0) {
+          setPaymentMode('CASH');
+          openTenderModal();
+        }
       } else if (e.key === 'F9') {
+        // F9: Instant UPI Tender
         e.preventDefault();
-        handleRecallBill();
+        if (cart.length > 0) {
+          setPaymentMode('UPI');
+          openTenderModal();
+        }
       } else if (e.key === 'F10') {
+        // F10: Quick Keys Grid
         e.preventDefault();
         setIsQuickKeysView(prev => !prev);
+      } else if (e.key === 'F11') {
+        // F11: Hold Bill
+        e.preventDefault();
+        handleHoldBill();
+      } else if (e.key === 'F12') {
+        // F12: Recall Bill
+        e.preventDefault();
+        handleRecallBill();
+      } else if (e.key === 'Escape') {
+        // Escape: Close active modals
+        if (isTenderOpen) setIsTenderOpen(false);
+        else if (isCustomerSearchModalOpen) setIsCustomerSearchModalOpen(false);
+        else if (isAddCustomerModalOpen) setIsAddCustomerModalOpen(false);
+        else if (isShiftModalOpen) setIsShiftModalOpen(false);
+        else if (isReturnsModalOpen) setIsReturnsModalOpen(false);
+        else if (recentInvoice) setRecentInvoice(null);
+        else if (searchQuery) {
+          setSearchQuery('');
+          setSearchResults([]);
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [cart, heldBills]);
+  }, [cart, heldBills, isTenderOpen, isCustomerSearchModalOpen, isAddCustomerModalOpen, isShiftModalOpen, isReturnsModalOpen, recentInvoice, searchQuery]);
 
   // Add product to cart
   const addToCart = (product, options = {}) => {
@@ -886,7 +957,7 @@ export function PosBilling() {
               className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-500 dark:text-amber-300 text-xs font-semibold animate-pulse"
             >
               <Play className="w-3.5 h-3.5" />
-              <span>Recall ({heldBills.length}) [F9]</span>
+              <span>Recall ({heldBills.length}) [F12]</span>
             </button>
           )}
 
@@ -896,10 +967,10 @@ export function PosBilling() {
             className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg border text-xs disabled:opacity-40 ${
               isDark ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-300' : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-700'
             }`}
-            title="Hold Current Bill (F8)"
+            title="Hold Current Bill (F11)"
           >
             <Pause className="w-3.5 h-3.5 text-amber-500" />
-            <span>Hold [F8]</span>
+            <span>Hold [F11]</span>
           </button>
         </div>
       </div>
@@ -943,7 +1014,7 @@ export function PosBilling() {
               <span className={`absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-mono px-1.5 py-0.5 rounded border ${
                 isDark ? 'bg-slate-800 text-slate-400 border-slate-700' : 'bg-slate-200 text-slate-600 border-slate-300'
               }`}>
-                F3 Search
+                F2 Search
               </span>
             </div>
 
@@ -1314,18 +1385,50 @@ export function PosBilling() {
             </div>
           </div>
 
-          {/* Bottom Tender Button */}
-          <div className="pt-4 space-y-2">
+          {/* Bottom Tender Action Buttons */}
+          <div className="pt-3 space-y-2">
             <button
               onClick={openTenderModal}
               disabled={cart.length === 0}
-              className="w-full py-4 rounded-xl bg-gradient-to-r from-brand-600 to-emerald-600 hover:from-brand-500 hover:to-emerald-500 text-white font-bold text-base shadow-xl shadow-brand-500/20 transition-all flex items-center justify-center space-x-2 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-brand-600 to-emerald-600 hover:from-brand-500 hover:to-emerald-500 text-white font-bold text-sm shadow-xl shadow-brand-500/20 transition-all flex items-center justify-center space-x-2 disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              <Banknote className="w-5 h-5" />
-              <span>Collect Payment [F4]</span>
+              <Banknote className="w-4 h-4" />
+              <span>Collect Payment [Tender]</span>
             </button>
+
+            {/* Quick 1-Click Cash & UPI Buttons */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => {
+                  if (cart.length > 0) {
+                    setPaymentMode('CASH');
+                    openTenderModal();
+                  }
+                }}
+                disabled={cart.length === 0}
+                className="py-2.5 px-3 rounded-xl bg-emerald-600/15 hover:bg-emerald-600/25 border border-emerald-500/40 text-emerald-600 dark:text-emerald-400 font-bold text-xs flex items-center justify-center space-x-1.5 transition-all disabled:opacity-40"
+              >
+                <Banknote className="w-3.5 h-3.5" />
+                <span>Cash [F8]</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  if (cart.length > 0) {
+                    setPaymentMode('UPI');
+                    openTenderModal();
+                  }
+                }}
+                disabled={cart.length === 0}
+                className="py-2.5 px-3 rounded-xl bg-purple-600/15 hover:bg-purple-600/25 border border-purple-500/40 text-purple-600 dark:text-purple-400 font-bold text-xs flex items-center justify-center space-x-1.5 transition-all disabled:opacity-40"
+              >
+                <QrCode className="w-3.5 h-3.5" />
+                <span>UPI [F9]</span>
+              </button>
+            </div>
+
             <div className={`text-center text-[10px] font-mono ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-              F2: New Bill • F3: Search • F4: Tender • F8: Hold • F9: Recall
+              F2: Search • F3: Customer • F4: Tier • F8: Cash • F9: UPI • F11: Hold • F12: Recall
             </div>
           </div>
         </div>
@@ -2352,7 +2455,7 @@ export function PosBilling() {
         <ThermalReceipt
           invoice={recentInvoice}
           onClose={() => setRecentInvoice(null)}
-          onSwitchToA4={() => setPrintFormat('A4')}
+          onSwitchToA4={() => updatePrintFormat('A4')}
         />
       )}
 
@@ -2360,7 +2463,7 @@ export function PosBilling() {
         <A4TaxInvoice
           invoice={recentInvoice}
           onClose={() => setRecentInvoice(null)}
-          onSwitchToThermal={() => setPrintFormat('THERMAL')}
+          onSwitchToThermal={() => updatePrintFormat('THERMAL')}
         />
       )}
 

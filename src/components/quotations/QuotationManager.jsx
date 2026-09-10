@@ -220,6 +220,38 @@ export function QuotationManager() {
     }
   };
 
+  const exportQuotationsCsv = () => {
+    if (!quotations || quotations.length === 0) {
+      alert('No quotations to export.');
+      return;
+    }
+
+    const headers = ['Quote Number', 'Date', 'Valid Until', 'Customer Name', 'Phone', 'GSTIN', 'Total Items', 'Subtotal (INR)', 'GST Tax (INR)', 'Grand Total (INR)', 'Status'];
+    const rows = quotations.map(q => [
+      `"${q.quotation_number || ''}"`,
+      `"${q.quotation_date || ''}"`,
+      `"${q.valid_until_date || ''}"`,
+      `"${(q.customer_name || 'Walk-in Client').replace(/"/g, '""')}"`,
+      `"${q.customer_phone || ''}"`,
+      `"${q.customer_gstin || ''}"`,
+      q.items?.length || 0,
+      Number(q.taxable_amount || q.subtotal || 0).toFixed(2),
+      Number(q.total_tax_amount || 0).toFixed(2),
+      Number(q.grand_total || 0).toFixed(2),
+      `"${q.status || 'DRAFT'}"`
+    ]);
+
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `Quotations_${activeShop?.name?.replace(/\s+/g, '_') || 'Shop'}_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // Start New Quotation Form
   const handleOpenNewQuotation = async () => {
     if (!activeShop) return;
@@ -657,13 +689,26 @@ export function QuotationManager() {
               <span>Back to Quotations List</span>
             </button>
           ) : (
-            <button
-              onClick={handleOpenNewQuotation}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-bold shadow-lg shadow-cyan-500/20 flex items-center space-x-1.5 transition-all"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Create New Quotation</span>
-            </button>
+            <>
+              <button
+                onClick={exportQuotationsCsv}
+                className={`px-3.5 py-2 rounded-xl border font-bold text-xs flex items-center space-x-1.5 transition-all ${
+                  isDark ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-200' : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-700'
+                }`}
+                title="Export quotations to CSV spreadsheet"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Export CSV</span>
+              </button>
+
+              <button
+                onClick={handleOpenNewQuotation}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-bold shadow-lg shadow-cyan-500/20 flex items-center space-x-1.5 transition-all"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Create New Quotation</span>
+              </button>
+            </>
           )}
         </div>
       </div>

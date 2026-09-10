@@ -31,6 +31,7 @@ import {
 import { exportElementToPdf } from '../../utils/pdfExport';
 import { EWayBillModal } from '../pos/EWayBillModal';
 import { A4TaxInvoice } from '../print/A4TaxInvoice';
+import { DataTablePagination } from '../common/DataTablePagination';
 
 export function EWayBillsManager() {
   const { activeShop } = useShop();
@@ -46,6 +47,10 @@ export function EWayBillsManager() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [transportModeFilter, setTransportModeFilter] = useState('ALL');
+  
+  // Pagination States
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
   
   // Selected items for modals
   const [editingBill, setEditingBill] = useState(null);
@@ -162,6 +167,13 @@ export function EWayBillsManager() {
       return true;
     });
   }, [ewayBills, search, statusFilter, transportModeFilter, datePreset, startDate, endDate]);
+
+  const paginatedEWayBills = useMemo(() => {
+    if (pageSize === 'ALL') return filteredEWayBills;
+    const size = Number(pageSize) || 25;
+    const startIndex = (currentPage - 1) * size;
+    return filteredEWayBills.slice(startIndex, startIndex + size);
+  }, [filteredEWayBills, currentPage, pageSize]);
 
   // Fast 1-Click Action: Mark as Delivered / Completed
   const handleMarkDelivered = async (bill) => {
@@ -694,7 +706,7 @@ export function EWayBillsManager() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                  {filteredEWayBills.map((bill) => (
+                  {paginatedEWayBills.map((bill) => (
                     <tr key={bill.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
                       {/* Document Details */}
                       <td className="p-3">
@@ -821,6 +833,18 @@ export function EWayBillsManager() {
                   ))}
                 </tbody>
               </table>
+
+              <DataTablePagination
+                currentPage={currentPage}
+                totalRecords={filteredEWayBills.length}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={(newSize) => {
+                  setPageSize(newSize);
+                  setCurrentPage(1);
+                }}
+                label="E-Way Bills"
+              />
             </div>
           )}
         </div>

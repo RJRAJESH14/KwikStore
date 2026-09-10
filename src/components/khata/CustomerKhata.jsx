@@ -6,6 +6,7 @@ import { CustomerStatementPrint } from '../print/CustomerStatementPrint';
 import { A4TaxInvoice } from '../print/A4TaxInvoice';
 import { ThermalReceipt } from '../print/ThermalReceipt';
 import { openWhatsAppInvoice } from '../../utils/whatsappUtils';
+import { DataTablePagination } from '../common/DataTablePagination';
 import { 
   Users, 
   Search, 
@@ -95,6 +96,10 @@ export function CustomerKhata() {
   const [endDate, setEndDate] = useState('');
   const [transactionType, setTransactionType] = useState('ALL'); // ALL, INVOICE, PAYMENT_RECEIVED, OPENING_BALANCE
   const [ledgerSearch, setLedgerSearch] = useState('');
+  const [ledgerCurrentPage, setLedgerCurrentPage] = useState(1);
+  const [ledgerPageSize, setLedgerPageSize] = useState(25);
+  const [invoiceCurrentPage, setInvoiceCurrentPage] = useState(1);
+  const [invoicePageSize, setInvoicePageSize] = useState(25);
 
   // Modals
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -1100,7 +1105,7 @@ export function CustomerKhata() {
                               </td>
                             </tr>
                           ) : (
-                            custLedger.map((row, idx) => (
+                            (ledgerPageSize === 'ALL' ? custLedger : custLedger.slice((ledgerCurrentPage - 1) * Number(ledgerPageSize), (ledgerCurrentPage - 1) * Number(ledgerPageSize) + Number(ledgerPageSize))).map((row, idx) => (
                               <tr key={idx} className={isDark ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50'}>
                                 <td className="py-2.5 px-3 font-mono text-slate-400">{row.date?.slice(0, 16)}</td>
                                 <td className="py-2.5 px-3">
@@ -1159,6 +1164,17 @@ export function CustomerKhata() {
                         </tbody>
                       </table>
                     </div>
+
+                    {/* Page Navigation Footer */}
+                    <DataTablePagination
+                      totalRecords={custLedger.length}
+                      currentPage={ledgerCurrentPage}
+                      setCurrentPage={setLedgerCurrentPage}
+                      pageSize={ledgerPageSize}
+                      setPageSize={setLedgerPageSize}
+                      recordLabel="Transactions"
+                      className="mt-3 rounded-xl border"
+                    />
                   </div>
                 </>
               ) : (
@@ -1279,7 +1295,7 @@ export function CustomerKhata() {
                               </td>
                             </tr>
                           ) : (
-                            filteredInvoices.map((inv) => (
+                            (invoicePageSize === 'ALL' ? filteredInvoices : filteredInvoices.slice((invoiceCurrentPage - 1) * Number(invoicePageSize), (invoiceCurrentPage - 1) * Number(invoicePageSize) + Number(invoicePageSize))).map((inv) => (
                               <tr key={inv.id} className={isDark ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50'}>
                                 <td className="py-2.5 px-3 font-mono font-bold">
                                   <button
@@ -1368,6 +1384,17 @@ export function CustomerKhata() {
                         </tbody>
                       </table>
                     </div>
+
+                    {/* Page Navigation Footer */}
+                    <DataTablePagination
+                      totalRecords={filteredInvoices.length}
+                      currentPage={invoiceCurrentPage}
+                      setCurrentPage={setInvoiceCurrentPage}
+                      pageSize={invoicePageSize}
+                      setPageSize={setInvoicePageSize}
+                      recordLabel="Invoices"
+                      className="mt-3 rounded-xl border"
+                    />
                   </div>
                 </div>
               )}

@@ -5,6 +5,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { ExpiryTracker } from './ExpiryTracker';
 import { BarcodeLabelDesigner } from './BarcodeLabelDesigner';
 import { StockAlertsModal } from './StockAlertsModal';
+import { DataTablePagination } from '../common/DataTablePagination';
 import { 
   Package, 
   Search, 
@@ -64,6 +65,8 @@ export function InventoryManager() {
   const [alertsSummary, setAlertsSummary] = useState(null);
   const [activeInventoryTab, setActiveInventoryTab] = useState('catalog'); // catalog, expiry, barcode
   const [industryMode, setIndustryMode] = useState('auto'); // auto, garments, pharmacy, hardware, grocery, electronics, general, all
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   const initialFormState = {
     shop_id: activeShop ? activeShop.id : 1,
@@ -393,6 +396,13 @@ export function InventoryManager() {
     ? products 
     : products.filter(p => p.category_id === parseInt(selectedCat, 10));
 
+  const totalProductRecords = filteredProducts.length;
+  const numericProductPageSize = pageSize === 'ALL' ? totalProductRecords : Number(pageSize);
+  const productStartIndex = (currentPage - 1) * numericProductPageSize;
+  const paginatedProducts = pageSize === 'ALL'
+    ? filteredProducts
+    : filteredProducts.slice(productStartIndex, productStartIndex + numericProductPageSize);
+
   return (
     <div className={`h-full flex flex-col overflow-hidden transition-colors duration-200 ${
       isDark ? 'bg-slate-950 text-slate-100' : 'bg-slate-100 text-slate-800'
@@ -562,14 +572,14 @@ export function InventoryManager() {
               </tr>
             </thead>
             <tbody className={`divide-y font-sans ${isDark ? 'divide-slate-800/60' : 'divide-slate-200'}`}>
-              {filteredProducts.length === 0 ? (
+              {paginatedProducts.length === 0 ? (
                 <tr>
                   <td colSpan={canSeeCosts ? 9 : 8} className="py-8 text-center text-slate-400 font-sans text-xs">
                     No products found matching your search.
                   </td>
                 </tr>
               ) : (
-                filteredProducts.map((p) => {
+                paginatedProducts.map((p) => {
                   const isLow = p.current_stock <= p.min_stock_alert;
                   return (
                     <tr key={p.id} className={isDark ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50'}>
@@ -659,31 +669,26 @@ export function InventoryManager() {
                               {p.trade_scheme}
                             </span>
                           )}
-                          {(p.default_size || p.default_color || p.has_variants === 1) && (
-                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-pink-500/10 text-pink-600 dark:text-pink-300 border border-pink-500/30 flex items-center gap-0.5">
-                              <span>👗</span>
-                              <span>{p.default_size ? `Size: ${p.default_size}` : 'Variant'}</span>
-                              {p.default_color && <span>• {p.default_color}</span>}
+                          {p.has_batch && (
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-600 dark:text-purple-300 border border-purple-500/30">
+                              Batch {p.default_batch_no ? `#${p.default_batch_no}` : ''}
                             </span>
                           )}
-                          {(p.default_batch_no || p.default_expiry_date || p.has_batch === 1) && (
-                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/30 flex items-center gap-0.5">
-                              <span>💊</span>
-                              <span>{p.default_batch_no ? `B:${p.default_batch_no}` : 'Batch'}</span>
-                              {p.default_expiry_date && <span>Exp: {p.default_expiry_date}</span>}
+                          {p.has_serial_imei && (
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-600 dark:text-sky-300 border border-sky-500/30">
+                              Serial/IMEI
                             </span>
                           )}
-                          {p.has_serial_imei === 1 && (
-                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-300 border border-blue-500/30">
-                              IMEI / Serial
+                          {p.has_variants && (
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-pink-500/20 text-pink-600 dark:text-pink-300 border border-pink-500/30">
+                              Variants
                             </span>
                           )}
                         </div>
                       </td>
 
-                      {/* Action buttons (View for all, Edit/Delete for Owner/Authorized) */}
                       <td className="py-3 px-3 text-center">
-                        <div className="flex items-center justify-center space-x-1.5">
+                        <div className="flex items-center justify-center space-x-1">
                           {/* View Product Details Button */}
                           <button
                             onClick={() => setViewingProduct(p)}
@@ -731,11 +736,20 @@ export function InventoryManager() {
             </tbody>
           </table>
         </div>
+
+        {/* Page Navigation Footer */}
+        <DataTablePagination
+          totalRecords={totalProductRecords}
+          currentPage={currentPage}
+          setCurrentPage={setCurrentPage}
+          pageSize={pageSize}
+          setPageSize={setPageSize}
+          recordLabel="Products"
+        />
       </div>
       </>
       )}
 
-      {/* Add / Edit Product Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
           <div className={`border rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col animate-in fade-in zoom-in-95 ${

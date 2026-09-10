@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useShop } from '../../context/ShopContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -10,6 +10,7 @@ import { StaffDirectoryView } from './StaffDirectoryView';
 import { AttendanceKioskModal } from './AttendanceKioskModal';
 import { PORTAL_MODULES } from '../staff/StaffRbacManager';
 import { numberToIndianWords } from '../../utils/numberToWords';
+import { DataTablePagination } from '../common/DataTablePagination';
 import { 
   UserCheck, 
   Users, 
@@ -97,6 +98,17 @@ export function HrmsDashboard() {
   const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState(null);
+
+  // Payroll Pagination State
+  const [payrollCurrentPage, setPayrollCurrentPage] = useState(1);
+  const [payrollPageSize, setPayrollPageSize] = useState(25);
+
+  const paginatedPayrollSummary = useMemo(() => {
+    if (payrollPageSize === 'ALL') return payrollSummary;
+    const size = Number(payrollPageSize) || 25;
+    const startIndex = (payrollCurrentPage - 1) * size;
+    return payrollSummary.slice(startIndex, startIndex + size);
+  }, [payrollSummary, payrollCurrentPage, payrollPageSize]);
 
   // Modals & Letters
   const [isEmpModalOpen, setIsEmpModalOpen] = useState(false);
@@ -1515,7 +1527,7 @@ export function HrmsDashboard() {
                   </tr>
                 </thead>
                 <tbody className={`divide-y ${isDark ? 'divide-slate-800' : 'divide-slate-200'}`}>
-                  {payrollSummary.map((rec, idx) => {
+                  {paginatedPayrollSummary.map((rec, idx) => {
                     const isProcessed = Boolean(rec.is_processed);
                     const pfDeduct = Number(rec.pf_deduction || 0);
 
@@ -1591,6 +1603,18 @@ export function HrmsDashboard() {
                   })}
                 </tbody>
               </table>
+
+              <DataTablePagination
+                currentPage={payrollCurrentPage}
+                totalRecords={payrollSummary.length}
+                pageSize={payrollPageSize}
+                onPageChange={setPayrollCurrentPage}
+                onPageSizeChange={(newSize) => {
+                  setPayrollPageSize(newSize);
+                  setPayrollCurrentPage(1);
+                }}
+                label="Payroll Records"
+              />
             </div>
           </div>
         )}

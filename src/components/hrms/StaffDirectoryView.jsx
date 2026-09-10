@@ -37,6 +37,7 @@ import {
   Briefcase,
   AlertCircle
 } from 'lucide-react';
+import { DataTablePagination } from '../common/DataTablePagination';
 
 const KYC_DOCUMENT_TYPES = [
   { key: 'PASSPORT_PHOTO', label: 'Passport Size Photo', desc: 'Required for ID Card & Avatar', icon: '📷' },
@@ -76,6 +77,10 @@ export function StaffDirectoryView({
   const [kycFilter, setKycFilter] = useState('ALL'); // 'ALL' | 'VERIFIED' | 'PENDING'
   const [accessFilter, setAccessFilter] = useState('ALL'); // 'ALL' | 'HAS_ACCESS' | 'NO_ACCESS'
   const [sortBy, setSortBy] = useState('name_asc'); // 'name_asc' | 'name_desc' | 'salary_desc' | 'joining_desc'
+
+  // Pagination States
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   // 360 Degree Profile Inspector Drawer / Modal
   const [selectedProfileEmp, setSelectedProfileEmp] = useState(null);
@@ -153,6 +158,13 @@ export function StaffDirectoryView({
       return 0;
     });
   }, [employees, searchQuery, departmentFilter, statusFilter, kycFilter, accessFilter, sortBy]);
+
+  const paginatedEmployees = useMemo(() => {
+    if (pageSize === 'ALL') return filteredEmployees;
+    const size = Number(pageSize) || 25;
+    const startIndex = (currentPage - 1) * size;
+    return filteredEmployees.slice(startIndex, startIndex + size);
+  }, [filteredEmployees, currentPage, pageSize]);
 
   // Aggregate KPI Highlights
   const kpis = useMemo(() => {
@@ -488,7 +500,7 @@ export function StaffDirectoryView({
       {/* VIEW 1: MODERN GRID CARDS VIEW */}
       {viewMode === 'grid' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredEmployees.map((emp) => {
+          {paginatedEmployees.map((emp) => {
             const isActive = emp.status === 'ACTIVE';
             const hasPf = Boolean(emp.is_pf_eligible);
             const docsCount = Number(emp.documents_count || 0);
@@ -758,7 +770,7 @@ export function StaffDirectoryView({
                 </tr>
               </thead>
               <tbody className={`divide-y ${isDark ? 'divide-slate-800' : 'divide-slate-100'}`}>
-                {filteredEmployees.map((emp, idx) => {
+                {paginatedEmployees.map((emp, idx) => {
                   const isActive = emp.status === 'ACTIVE';
                   const docsCount = Number(emp.documents_count || 0);
 
@@ -923,7 +935,7 @@ export function StaffDirectoryView({
       {/* VIEW 3: COMPACT LIST VIEW */}
       {viewMode === 'compact' && (
         <div className="space-y-2">
-          {filteredEmployees.map((emp) => {
+          {paginatedEmployees.map((emp) => {
             const isActive = emp.status === 'ACTIVE';
             const docsCount = Number(emp.documents_count || 0);
 
@@ -1105,6 +1117,21 @@ export function StaffDirectoryView({
             );
           })}
         </div>
+      )}
+
+      {/* Pagination for Staff Directory (Grid / Table / Compact) */}
+      {viewMode !== 'department' && (
+        <DataTablePagination
+          currentPage={currentPage}
+          totalRecords={filteredEmployees.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={(newSize) => {
+            setPageSize(newSize);
+            setCurrentPage(1);
+          }}
+          label="Employees"
+        />
       )}
 
       {/* 360° EMPLOYEE PROFILE INSPECTOR MODAL / DRAWER */}

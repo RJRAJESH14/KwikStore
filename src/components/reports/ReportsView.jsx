@@ -7,6 +7,7 @@ import { A4TaxInvoice } from '../print/A4TaxInvoice';
 import { ThermalReceipt } from '../print/ThermalReceipt';
 import { OwnerSummaryModal } from './OwnerSummaryModal';
 import { EWayBillModal } from '../pos/EWayBillModal';
+import { DataTablePagination } from '../common/DataTablePagination';
 import { 
   BarChart3, 
   TrendingUp, 
@@ -68,6 +69,36 @@ export function ReportsView() {
   const [staffUsers, setStaffUsers] = useState([]);
   const [profitLossData, setProfitLossData] = useState({ summary: { totalRevenue: 0, totalCogs: 0, totalGrossProfit: 0, marginPercent: 0 }, items: [] });
   const [hsnData, setHsnData] = useState([]);
+
+  // Pagination States
+  const [salesCurrentPage, setSalesCurrentPage] = useState(1);
+  const [salesPageSize, setSalesPageSize] = useState(25);
+  const [plCurrentPage, setPlCurrentPage] = useState(1);
+  const [plPageSize, setPlPageSize] = useState(25);
+  const [hsnCurrentPage, setHsnCurrentPage] = useState(1);
+  const [hsnPageSize, setHsnPageSize] = useState(25);
+
+  const paginatedInvoices = useMemo(() => {
+    if (salesPageSize === 'ALL') return invoices;
+    const size = Number(salesPageSize) || 25;
+    const startIndex = (salesCurrentPage - 1) * size;
+    return invoices.slice(startIndex, startIndex + size);
+  }, [invoices, salesCurrentPage, salesPageSize]);
+
+  const paginatedPlItems = useMemo(() => {
+    const items = profitLossData.items || [];
+    if (plPageSize === 'ALL') return items;
+    const size = Number(plPageSize) || 25;
+    const startIndex = (plCurrentPage - 1) * size;
+    return items.slice(startIndex, startIndex + size);
+  }, [profitLossData.items, plCurrentPage, plPageSize]);
+
+  const paginatedHsnData = useMemo(() => {
+    if (hsnPageSize === 'ALL') return hsnData;
+    const size = Number(hsnPageSize) || 25;
+    const startIndex = (hsnCurrentPage - 1) * size;
+    return hsnData.slice(startIndex, startIndex + size);
+  }, [hsnData, hsnCurrentPage, hsnPageSize]);
   
   // Invoice Inspection / Print Modal
   const [selectedInvoice, setSelectedInvoice] = useState(null);
@@ -1213,7 +1244,7 @@ export function ReportsView() {
                     </td>
                   </tr>
                 ) : (
-                  invoices.map((inv) => {
+                  paginatedInvoices.map((inv) => {
                     const totalTax = (inv.cgst_amount || 0) + (inv.sgst_amount || 0) + (inv.igst_amount || 0);
                     return (
                       <tr 
@@ -1336,6 +1367,18 @@ export function ReportsView() {
                 )}
               </tbody>
             </table>
+
+            <DataTablePagination
+              currentPage={salesCurrentPage}
+              totalRecords={invoices.length}
+              pageSize={salesPageSize}
+              onPageChange={setSalesCurrentPage}
+              onPageSizeChange={(newSize) => {
+                setSalesPageSize(newSize);
+                setSalesCurrentPage(1);
+              }}
+              label="Invoices"
+            />
           </div>
         </div>
       </div>
@@ -1465,7 +1508,7 @@ export function ReportsView() {
                         </td>
                       </tr>
                     ) : (
-                      profitLossData.items.map((item, idx) => {
+                      paginatedPlItems.map((item, idx) => {
                         const margin = item.total_sales_revenue > 0 ? (item.gross_profit / item.total_sales_revenue) * 100 : 0;
                         return (
                           <tr key={idx} className={isDark ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50'}>
@@ -1514,6 +1557,18 @@ export function ReportsView() {
                     )}
                   </tbody>
                 </table>
+
+                <DataTablePagination
+                  currentPage={plCurrentPage}
+                  totalRecords={(profitLossData.items || []).length}
+                  pageSize={plPageSize}
+                  onPageChange={setPlCurrentPage}
+                  onPageSizeChange={(newSize) => {
+                    setPlPageSize(newSize);
+                    setPlCurrentPage(1);
+                  }}
+                  label="Items"
+                />
               </div>
             </div>
           </div>
@@ -1583,7 +1638,7 @@ export function ReportsView() {
                       </td>
                     </tr>
                   ) : (
-                    hsnData.map((row, idx) => {
+                    paginatedHsnData.map((row, idx) => {
                       const totalTax = (row.total_cgst || 0) + (row.total_sgst || 0) + (row.total_igst || 0);
                       return (
                         <tr key={idx} className={isDark ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50'}>
@@ -1623,6 +1678,18 @@ export function ReportsView() {
                   )}
                 </tbody>
               </table>
+
+              <DataTablePagination
+                currentPage={hsnCurrentPage}
+                totalRecords={hsnData.length}
+                pageSize={hsnPageSize}
+                onPageChange={setHsnCurrentPage}
+                onPageSizeChange={(newSize) => {
+                  setHsnPageSize(newSize);
+                  setHsnCurrentPage(1);
+                }}
+                label="HSN Records"
+              />
             </div>
           </div>
         )}

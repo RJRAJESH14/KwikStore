@@ -25,6 +25,7 @@ import {
   ArrowRight,
   Database
 } from 'lucide-react';
+import { DataTablePagination } from '../common/DataTablePagination';
 
 export function RecycleBin() {
   const { activeShop } = useShop();
@@ -36,6 +37,17 @@ export function RecycleBin() {
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedType, setSelectedType] = useState('ALL');
+
+  // Pagination States
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+
+  const paginatedItems = useMemo(() => {
+    if (pageSize === 'ALL') return items;
+    const size = Number(pageSize) || 25;
+    const startIndex = (currentPage - 1) * size;
+    return items.slice(startIndex, startIndex + size);
+  }, [items, currentPage, pageSize]);
 
   // Modal States
   const [inspectItem, setInspectItem] = useState(null);
@@ -372,7 +384,7 @@ export function RecycleBin() {
             </p>
           </div>
         ) : (
-          items.map((item) => {
+          paginatedItems.map((item) => {
             const cfg = typeConfig[item.item_type] || typeConfig['ALL'];
             const Icon = cfg.icon;
             const daysLeft = item.days_left !== undefined ? item.days_left : 30;
@@ -470,6 +482,19 @@ export function RecycleBin() {
           })
         )}
       </div>
+
+      {/* Pagination Footer */}
+      <DataTablePagination
+        currentPage={currentPage}
+        totalRecords={items.length}
+        pageSize={pageSize}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={(newSize) => {
+          setPageSize(newSize);
+          setCurrentPage(1);
+        }}
+        label="Deleted Items"
+      />
 
       {/* Modal 1: Inspect Item Details */}
       {inspectItem && (

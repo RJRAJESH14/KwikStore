@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { useShop } from '../../context/ShopContext';
@@ -6,6 +6,7 @@ import {
   Receipt, Plus, Trash2, Search, Filter, Calendar, 
   TrendingDown, DollarSign, PieChart, Download, FileText, CheckCircle2, AlertCircle
 } from 'lucide-react';
+import { DataTablePagination } from '../common/DataTablePagination';
 
 export function ExpenseManager() {
   const { isDark } = useTheme();
@@ -20,6 +21,17 @@ export function ExpenseManager() {
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+
+  // Pagination States
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+
+  const paginatedExpenses = useMemo(() => {
+    if (pageSize === 'ALL') return expenses;
+    const size = Number(pageSize) || 25;
+    const startIndex = (currentPage - 1) * size;
+    return expenses.slice(startIndex, startIndex + size);
+  }, [expenses, currentPage, pageSize]);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -249,7 +261,7 @@ export function ExpenseManager() {
               </tr>
             </thead>
             <tbody className={`divide-y font-mono ${isDark ? 'divide-slate-800/40' : 'divide-slate-200'}`}>
-              {expenses.map((exp) => (
+              {paginatedExpenses.map((exp) => (
                 <tr key={exp.id} className={isDark ? 'hover:bg-slate-800/40 transition-colors' : 'hover:bg-slate-50 transition-colors'}>
                   <td className={`p-3.5 whitespace-nowrap ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                     {new Date(exp.expense_date).toLocaleDateString('en-IN')}
@@ -300,6 +312,18 @@ export function ExpenseManager() {
             </tbody>
           </table>
         </div>
+
+        <DataTablePagination
+          currentPage={currentPage}
+          totalRecords={expenses.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={(newSize) => {
+            setPageSize(newSize);
+            setCurrentPage(1);
+          }}
+          label="Expenses"
+        />
       </div>
 
       {/* Add Expense Modal */}

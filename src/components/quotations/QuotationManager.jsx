@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useShop } from '../../context/ShopContext';
 import { useTheme } from '../../context/ThemeContext';
+import { DataTablePagination } from '../common/DataTablePagination';
 import { 
   FileText, 
   Plus, 
@@ -103,6 +104,8 @@ export function QuotationManager() {
   const [customEndDate, setCustomEndDate] = useState('');
   const [loadingList, setLoadingList] = useState(false);
   const [notification, setNotification] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   // Active Preview & Print Modal
   const [selectedQuotation, setSelectedQuotation] = useState(null);
@@ -858,7 +861,7 @@ export function QuotationManager() {
                       </td>
                     </tr>
                   ) : (
-                    quotations.map((q) => {
+                    (pageSize === 'ALL' ? quotations : quotations.slice((currentPage - 1) * Number(pageSize), (currentPage - 1) * Number(pageSize) + Number(pageSize))).map((q) => {
                       const isConverted = q.status === 'CONVERTED';
 
                       return (
@@ -972,6 +975,16 @@ export function QuotationManager() {
                 </tbody>
               </table>
             </div>
+
+            {/* Page Navigation Footer */}
+            <DataTablePagination
+              totalRecords={quotations.length}
+              currentPage={currentPage}
+              setCurrentPage={setCurrentPage}
+              pageSize={pageSize}
+              setPageSize={setPageSize}
+              recordLabel="Quotations"
+            />
           </>
         )}
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useShop } from '../../context/ShopContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
+import { DataTablePagination } from '../common/DataTablePagination';
 import { 
   Truck, 
   Plus, 
@@ -98,6 +99,8 @@ export function SupplierManager() {
   const [form, setForm] = useState(initialSupplierForm);
   const [saving, setSaving] = useState(false);
   const [notification, setNotification] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   useEffect(() => {
     if (activeShop) {
@@ -453,7 +456,7 @@ export function SupplierManager() {
                     </td>
                   </tr>
                 ) : (
-                  suppliers.map((s) => (
+                  (pageSize === 'ALL' ? suppliers : suppliers.slice((currentPage - 1) * Number(pageSize), (currentPage - 1) * Number(pageSize) + Number(pageSize))).map((s) => (
                     <tr
                       key={s.id}
                       className={`transition-colors ${
@@ -595,6 +598,16 @@ export function SupplierManager() {
               </tbody>
             </table>
           </div>
+
+          {/* Page Navigation Footer */}
+          <DataTablePagination
+            totalRecords={suppliers.length}
+            currentPage={currentPage}
+            setCurrentPage={setCurrentPage}
+            pageSize={pageSize}
+            setPageSize={setPageSize}
+            recordLabel="Suppliers"
+          />
         </div>
       </div>
 

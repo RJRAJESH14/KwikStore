@@ -301,9 +301,9 @@ export function A4TaxInvoice({ invoice, onClose, onPrint, onSwitchToThermal }) {
 
                 {/* Right Header: Invoice Metadata & Scannable Barcode */}
                 <div className="text-right flex flex-col items-end space-y-1">
-                  <div className="bg-slate-900 text-white px-3.5 py-1.5 rounded-xl text-right shadow-sm">
-                    <div className="text-[9px] uppercase tracking-widest text-slate-300 font-bold">Invoice Number</div>
-                    <div className="text-sm font-black font-mono tracking-wider">{invoice.invoice_number}</div>
+                  <div className="bg-slate-50 border border-slate-200 px-3.5 py-1.5 rounded-xl text-right">
+                    <div className="text-[9px] uppercase tracking-widest text-slate-500 font-bold">Invoice Number</div>
+                    <div className="text-sm font-black font-mono tracking-wider text-slate-900">{invoice.invoice_number}</div>
                   </div>
                   <div className="text-xs text-slate-700 pt-1">
                     Invoice Date: <strong className="font-mono text-slate-900">{formattedDate}</strong>

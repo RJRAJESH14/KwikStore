@@ -306,16 +306,22 @@ html:not(.dark) thead th,
 html.light thead th {
   background-color: #f8fafc !important;
   color: #1e293b !important;
-  border-bottom: 2px solid #e2e8f0 !important;
+  border-bottom: 2px solid #cbd5e1 !important;
+  border-right: 1px solid #cbd5e1 !important;
 }
 
 html.dark thead th {
   background-color: #090d16 !important;
   color: #cbd5e1 !important;
-  border-bottom: 2px solid #1e293b !important;
+  border-bottom: 2px solid #334155 !important;
+  border-right: 1px solid #1e293b !important;
 }
 
-/* Distinct, breathable table cells */
+thead th:last-child {
+  border-right: none !important;
+}
+
+/* Distinct, breathable table cells with Excel-style vertical column gridlines */
 tbody td,
 .table-data-cell {
   padding: 0.85rem 1rem !important;
@@ -327,12 +333,18 @@ tbody td,
 html:not(.dark) tbody td,
 html.light tbody td {
   color: #0f172a !important;
-  border-bottom: 1px solid #f1f5f9 !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  border-right: 1px solid #e2e8f0 !important;
 }
 
 html.dark tbody td {
   color: #f1f5f9 !important;
   border-bottom: 1px solid #1e293b !important;
+  border-right: 1px solid #1e293b !important;
+}
+
+tbody td:last-child {
+  border-right: none !important;
 }
 
 /* Distinct row hover highlights */

@@ -24,9 +24,10 @@
 
   /* Crisp typography headings */
   h1, h2, h3, h4, h5, h6 {
-    font-weight: 700;
+    font-weight: 800;
     letter-spacing: -0.025em;
     color: #0f172a;
+    line-height: 1.25;
   }
 
   html.dark h1, 
@@ -38,25 +39,68 @@
     color: #f8fafc;
   }
 
-  /* High-contrast table headers & cells in light mode */
+  /* Monospace numbers, codes & currency with uniform tabular alignment */
+  .font-mono,
+  code,
+  kbd,
+  samp {
+    font-family: 'JetBrains Mono', 'SFMono-Regular', Menlo, Monaco, Consolas, monospace;
+    font-variant-numeric: tabular-nums lining-nums;
+    font-feature-settings: "tnum" 1, "zero" 1;
+    letter-spacing: -0.015em;
+  }
+
+  /* High-contrast table headers & cells across all pages */
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    text-rendering: optimizeLegibility;
+  }
+
   th {
-    font-weight: 700;
-    color: #0f172a;
-    background-color: rgba(241, 245, 249, 0.9);
+    font-size: 0.725rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #334155;
+    background-color: #f8fafc;
+    border-bottom: 2px solid #e2e8f0;
+    vertical-align: middle;
   }
 
   html.dark th {
-    font-weight: 600;
+    font-size: 0.725rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
     color: #cbd5e1;
-    background-color: transparent;
+    background-color: #0f172a;
+    border-bottom: 2px solid #1e293b;
   }
 
   td {
-    color: #1e293b;
+    color: #0f172a;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+    font-size: 0.8125rem;
   }
 
   html.dark td {
-    color: #e2e8f0;
+    color: #f1f5f9;
+    border-bottom: 1px solid #1e293b;
+  }
+
+  /* Subtle interactive row highlights */
+  tbody tr {
+    transition: background-color 0.15s ease;
+  }
+
+  tbody tr:hover {
+    background-color: rgba(241, 245, 249, 0.8);
+  }
+
+  html.dark tbody tr:hover {
+    background-color: rgba(30, 41, 59, 0.45);
   }
 
   label {
@@ -65,7 +109,7 @@
   }
 
   html.dark label {
-    font-weight: 400;
+    font-weight: 500;
     color: #cbd5e1;
   }
 
@@ -240,6 +284,125 @@ html.dark ::-webkit-scrollbar-thumb:hover {
 
 .dark-card {
   @apply bg-slate-900 border border-slate-800 shadow-lg rounded-xl text-slate-100;
+}
+
+/* ============================================================
+   UNIVERSAL TABLE, ROW & COLUMN SEPARATION & TYPOGRAPHY ENGINE
+   Enhances clarity, line separation, and readability in both modes
+   ============================================================ */
+
+/* High-contrast table headers */
+thead th,
+.table-header-cell {
+  font-size: 0.725rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.05em !important;
+  text-transform: uppercase !important;
+  padding: 0.85rem 1rem !important;
+  vertical-align: middle !important;
+}
+
+html:not(.dark) thead th,
+html.light thead th {
+  background-color: #f8fafc !important;
+  color: #1e293b !important;
+  border-bottom: 2px solid #e2e8f0 !important;
+}
+
+html.dark thead th {
+  background-color: #090d16 !important;
+  color: #cbd5e1 !important;
+  border-bottom: 2px solid #1e293b !important;
+}
+
+/* Distinct, breathable table cells */
+tbody td,
+.table-data-cell {
+  padding: 0.85rem 1rem !important;
+  vertical-align: middle !important;
+  font-size: 0.8125rem !important;
+  line-height: 1.4 !important;
+}
+
+html:not(.dark) tbody td,
+html.light tbody td {
+  color: #0f172a !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+}
+
+html.dark tbody td {
+  color: #f1f5f9 !important;
+  border-bottom: 1px solid #1e293b !important;
+}
+
+/* Distinct row hover highlights */
+tbody tr {
+  transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out !important;
+}
+
+html:not(.dark) tbody tr:hover,
+html.light tbody tr:hover {
+  background-color: rgba(240, 249, 255, 0.75) !important;
+}
+
+html.dark tbody tr:hover {
+  background-color: rgba(30, 41, 59, 0.55) !important;
+}
+
+/* Multi-line cell text hierarchy */
+.cell-primary-title {
+  font-weight: 800 !important;
+  font-size: 0.825rem !important;
+  line-height: 1.25 !important;
+  letter-spacing: -0.015em !important;
+}
+
+html:not(.dark) .cell-primary-title,
+html.light .cell-primary-title {
+  color: #0f172a !important;
+}
+
+html.dark .cell-primary-title {
+  color: #ffffff !important;
+}
+
+.cell-secondary-meta {
+  font-size: 0.7rem !important;
+  font-weight: 600 !important;
+  line-height: 1.35 !important;
+  letter-spacing: 0.01em !important;
+  margin-top: 2px !important;
+}
+
+html:not(.dark) .cell-secondary-meta,
+html.light .cell-secondary-meta {
+  color: #475569 !important;
+}
+
+html.dark .cell-secondary-meta {
+  color: #94a3b8 !important;
+}
+
+/* Tabular numeric columns (Currency, Rates, Quantities, Balances) */
+.cell-amount,
+.cell-numeric {
+  font-family: 'JetBrains Mono', monospace !important;
+  font-variant-numeric: tabular-nums lining-nums !important;
+  font-feature-settings: "tnum" 1, "zero" 1 !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.02em !important;
+  white-space: nowrap !important;
+}
+
+/* Crisp column dividers for key data tables */
+.table-divided td:not(:last-child),
+.table-divided th:not(:last-child) {
+  border-right: 1px solid rgba(226, 232, 240, 0.6);
+}
+
+html.dark .table-divided td:not(:last-child),
+html.dark .table-divided th:not(:last-child) {
+  border-right: 1px solid rgba(30, 41, 59, 0.5);
 }
 
 /* ============================================================

@@ -205,28 +205,28 @@ export function ThermalReceipt({ invoice, onClose, onPrint, onSwitchToA4 }) {
         }`}>
           <div 
             id="printable-thermal-receipt" 
-            className="bg-white text-black p-4 shadow-xl font-mono border border-slate-300 print:border-none print:shadow-none print:p-1" 
-            style={{ width: is58 ? '240px' : '320px', fontSize: is58 ? '9.5px' : '11px' }}
+            className="bg-white text-black p-3.5 pb-6 shadow-xl font-mono border border-slate-300 print:border-none print:shadow-none print:p-1" 
+            style={{ width: is58 ? '230px' : '320px', fontSize: is58 ? '9px' : '11px' }}
           >
             {/* Store Header */}
             <div className="text-center pb-2 border-b-2 border-dashed border-gray-800 space-y-0.5">
-              <h2 className="text-sm font-black tracking-tight uppercase leading-tight">{invoice.shop_name}</h2>
-              {invoice.shop_legal_name && <p className="text-[9px] text-gray-700">{invoice.shop_legal_name}</p>}
-              <p className="text-[9px] text-gray-700 leading-tight">{invoice.shop_address}, {invoice.shop_city}</p>
-              <p className="text-[9px] font-bold text-gray-900">Ph: {invoice.shop_phone}</p>
+              <h2 className={`font-black tracking-tight uppercase leading-tight ${is58 ? 'text-xs' : 'text-sm'}`}>{invoice.shop_name}</h2>
+              {invoice.shop_legal_name && <p className="text-[8.5px] text-gray-700 leading-tight">{invoice.shop_legal_name}</p>}
+              <p className="text-[8.5px] text-gray-700 leading-tight">{invoice.shop_address}, {invoice.shop_city}</p>
+              <p className="text-[8.5px] font-bold text-gray-900">Ph: {invoice.shop_phone}</p>
               {invoice.shop_gstin && (
-                <p className="text-[9.5px] font-black text-black">GSTIN: {invoice.shop_gstin}</p>
+                <p className="text-[9px] font-black text-black">GSTIN: {invoice.shop_gstin}</p>
               )}
               {(invoice.shop_drug_license_no || invoice.drug_license_no) && (
-                <p className="text-[9px] font-bold text-gray-800">D.L. No: {invoice.shop_drug_license_no || invoice.drug_license_no}</p>
+                <p className="text-[8.5px] font-bold text-gray-800">D.L. No: {invoice.shop_drug_license_no || invoice.drug_license_no}</p>
               )}
               {invoice.shop_fssai_no && (
-                <p className="text-[9px] font-bold text-gray-800">FSSAI: {invoice.shop_fssai_no}</p>
+                <p className="text-[8.5px] font-bold text-gray-800">FSSAI: {invoice.shop_fssai_no}</p>
               )}
             </div>
 
             {/* Bill Details */}
-            <div className="py-2 border-b border-dashed border-gray-600 text-[10px] space-y-0.5">
+            <div className="py-2 border-b border-dashed border-gray-600 text-[9.5px] space-y-0.5">
               <div className="flex justify-between font-bold">
                 <span>Bill: #{invoice.invoice_number}</span>
                 <span>{formattedTime}</span>
@@ -235,73 +235,110 @@ export function ThermalReceipt({ invoice, onClose, onPrint, onSwitchToA4 }) {
                 <span>Date: {formattedDate}</span>
                 <span>Type: {invoice.invoice_type === 'TAX_INVOICE_B2B' ? 'B2B GST' : 'Retail'}</span>
               </div>
-              <div className="text-gray-900 font-semibold truncate">
+              <div className="text-gray-900 font-semibold break-words">
                 Customer: <strong>{invoice.customer_name || 'Walk-in'}</strong> {invoice.customer_phone ? `(${invoice.customer_phone})` : ''}
               </div>
               {invoice.customer_gstin && (
-                <div className="font-bold text-[9px]">Buyer GST: {invoice.customer_gstin}</div>
+                <div className="font-bold text-[8.5px]">Buyer GST: {invoice.customer_gstin}</div>
               )}
               {invoice.cashier_name && (
-                <div className="text-[9px] text-gray-700">Cashier: {invoice.cashier_name}</div>
+                <div className="text-[8.5px] text-gray-700">Cashier: {invoice.cashier_name}</div>
               )}
             </div>
 
-            {/* Item Table */}
-            <table className="w-full my-2 text-[10px] border-collapse">
-              <thead>
-                <tr className="border-b-2 border-gray-800 text-left font-black uppercase text-[9px]">
-                  <th className="py-1">Item</th>
-                  <th className="py-1 text-center">Qty</th>
-                  <th className="py-1 text-right">Rate</th>
-                  <th className="py-1 text-right">Amt</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-300">
+            {/* Item Table (58mm 2-line layout vs 80mm table layout) */}
+            {is58 ? (
+              <div className="my-2 border-b-2 border-dashed border-gray-800 pb-1 space-y-1.5">
+                <div className="flex justify-between font-black uppercase text-[8.5px] border-b border-gray-400 pb-0.5">
+                  <span>Item / Qty × Rate</span>
+                  <span>Amount</span>
+                </div>
                 {(invoice.items && invoice.items.length > 0) ? (
                   invoice.items.map((item, idx) => (
-                    <tr key={idx}>
-                      <td className="py-1 pr-1">
-                        <div className="font-bold text-gray-900 leading-tight">{item.item_name || 'Item'}</div>
-                        {(item.barcode || item.product_barcode) && (
-                          <div className="text-[8px] text-gray-600 font-mono">BC: {item.barcode || item.product_barcode}</div>
-                        )}
-                        {item.batch_no && (
-                          <div className="text-[8px] text-gray-700">Batch: {item.batch_no} {item.expiry_date ? `| Exp: ${item.expiry_date}` : ''}</div>
-                        )}
-                        {item.serial_imei && (
-                          <div className="text-[8px] text-gray-700">SN: {item.serial_imei}</div>
-                        )}
-                        {item.variant_details && (
-                          <div className="text-[8px] text-gray-700">{item.variant_details}</div>
-                        )}
-                        {Number(item.free_quantity) > 0 && (
-                          <div className="text-[8px] text-emerald-800 font-bold">+ {item.free_quantity} Free</div>
-                        )}
-                      </td>
-                      <td className="py-1 text-center font-semibold whitespace-nowrap">
-                        {item.quantity || 1} {item.unit || 'PCS'}
-                      </td>
-                      <td className="py-1 text-right font-mono whitespace-nowrap">
-                        ₹{Number(item.unit_price || 0).toFixed(2)}
-                      </td>
-                      <td className="py-1 text-right font-mono font-bold whitespace-nowrap">
-                        ₹{Number(item.total_amount || (item.quantity * item.unit_price) || 0).toFixed(2)}
-                      </td>
-                    </tr>
+                    <div key={idx} className="border-b border-dashed border-gray-200 pb-1 last:border-b-0">
+                      <div className="font-bold text-gray-950 leading-tight break-words">{item.item_name || 'Item'}</div>
+                      <div className="flex justify-between items-center text-[8.5px] text-gray-700 mt-0.5">
+                        <span>{item.quantity || 1} {item.unit || 'PCS'} × ₹{Number(item.unit_price || 0).toFixed(2)}</span>
+                        <span className="font-mono font-black text-gray-950 text-[9.5px]">₹{Number(item.total_amount || (item.quantity * item.unit_price) || 0).toFixed(2)}</span>
+                      </div>
+                      {(item.barcode || item.product_barcode) && (
+                        <div className="text-[7.5px] text-gray-500 font-mono">BC: {item.barcode || item.product_barcode}</div>
+                      )}
+                      {item.batch_no && (
+                        <div className="text-[7.5px] text-gray-600">Batch: {item.batch_no} {item.expiry_date ? `| Exp: ${item.expiry_date}` : ''}</div>
+                      )}
+                      {item.serial_imei && (
+                        <div className="text-[7.5px] text-gray-600">SN: {item.serial_imei}</div>
+                      )}
+                      {Number(item.free_quantity) > 0 && (
+                        <div className="text-[7.5px] text-emerald-800 font-bold">+ {item.free_quantity} Free</div>
+                      )}
+                    </div>
                   ))
                 ) : (
-                  <tr>
-                    <td className="py-1 pr-1 font-bold">Consolidated Retail Items</td>
-                    <td className="py-1 text-center">1 LOT</td>
-                    <td className="py-1 text-right font-mono">₹{Number(invoice.grand_total || 0).toFixed(2)}</td>
-                    <td className="py-1 text-right font-mono font-bold">₹{Number(invoice.grand_total || 0).toFixed(2)}</td>
-                  </tr>
+                  <div className="flex justify-between items-center py-1">
+                    <span className="font-bold text-[8.5px]">Consolidated Items</span>
+                    <span className="font-mono font-bold text-[9px]">₹{Number(invoice.grand_total || 0).toFixed(2)}</span>
+                  </div>
                 )}
-              </tbody>
-            </table>
+              </div>
+            ) : (
+              <table className="w-full my-2 text-[10px] border-collapse">
+                <thead>
+                  <tr className="border-b-2 border-gray-800 text-left font-black uppercase text-[9px]">
+                    <th className="py-1">Item</th>
+                    <th className="py-1 text-center">Qty</th>
+                    <th className="py-1 text-right">Rate</th>
+                    <th className="py-1 text-right">Amt</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-300">
+                  {(invoice.items && invoice.items.length > 0) ? (
+                    invoice.items.map((item, idx) => (
+                      <tr key={idx}>
+                        <td className="py-1 pr-1">
+                          <div className="font-bold text-gray-900 leading-tight">{item.item_name || 'Item'}</div>
+                          {(item.barcode || item.product_barcode) && (
+                            <div className="text-[8px] text-gray-600 font-mono">BC: {item.barcode || item.product_barcode}</div>
+                          )}
+                          {item.batch_no && (
+                            <div className="text-[8px] text-gray-700">Batch: {item.batch_no} {item.expiry_date ? `| Exp: ${item.expiry_date}` : ''}</div>
+                          )}
+                          {item.serial_imei && (
+                            <div className="text-[8px] text-gray-700">SN: {item.serial_imei}</div>
+                          )}
+                          {item.variant_details && (
+                            <div className="text-[8px] text-gray-700">{item.variant_details}</div>
+                          )}
+                          {Number(item.free_quantity) > 0 && (
+                            <div className="text-[8px] text-emerald-800 font-bold">+ {item.free_quantity} Free</div>
+                          )}
+                        </td>
+                        <td className="py-1 text-center font-semibold whitespace-nowrap">
+                          {item.quantity || 1} {item.unit || 'PCS'}
+                        </td>
+                        <td className="py-1 text-right font-mono whitespace-nowrap">
+                          ₹{Number(item.unit_price || 0).toFixed(2)}
+                        </td>
+                        <td className="py-1 text-right font-mono font-bold whitespace-nowrap">
+                          ₹{Number(item.total_amount || (item.quantity * item.unit_price) || 0).toFixed(2)}
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td className="py-1 pr-1 font-bold">Consolidated Retail Items</td>
+                      <td className="py-1 text-center">1 LOT</td>
+                      <td className="py-1 text-right font-mono">₹{Number(invoice.grand_total || 0).toFixed(2)}</td>
+                      <td className="py-1 text-right font-mono font-bold">₹{Number(invoice.grand_total || 0).toFixed(2)}</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            )}
 
             {/* Calculations & Summary */}
-            <div className="pt-2 border-t-2 border-dashed border-gray-800 text-[10px] space-y-0.5">
+            <div className={`pt-1.5 ${is58 ? '' : 'border-t-2 border-dashed border-gray-800'} text-[9.5px] space-y-0.5`}>
               <div className="flex justify-between">
                 <span>Total Items ({invoice.items?.length || 0}):</span>
                 <span className="font-mono font-semibold">₹{Number(invoice.sub_total || invoice.taxable_amount || invoice.grand_total || 0).toFixed(2)}</span>
@@ -315,28 +352,28 @@ export function ThermalReceipt({ invoice, onClose, onPrint, onSwitchToA4 }) {
               )}
 
               {Number(invoice.cgst_amount) > 0 && (
-                <div className="flex justify-between text-[9px] text-gray-700">
+                <div className="flex justify-between text-[8.5px] text-gray-700">
                   <span>CGST:</span>
                   <span className="font-mono">₹{Number(invoice.cgst_amount).toFixed(2)}</span>
                 </div>
               )}
 
               {Number(invoice.sgst_amount) > 0 && (
-                <div className="flex justify-between text-[9px] text-gray-700">
+                <div className="flex justify-between text-[8.5px] text-gray-700">
                   <span>SGST:</span>
                   <span className="font-mono">₹{Number(invoice.sgst_amount).toFixed(2)}</span>
                 </div>
               )}
 
               {Number(invoice.igst_amount) > 0 && (
-                <div className="flex justify-between text-[9px] text-gray-700">
+                <div className="flex justify-between text-[8.5px] text-gray-700">
                   <span>IGST:</span>
                   <span className="font-mono">₹{Number(invoice.igst_amount).toFixed(2)}</span>
                 </div>
               )}
 
               {Number(invoice.round_off) !== 0 && (
-                <div className="flex justify-between text-[9px] text-gray-700">
+                <div className="flex justify-between text-[8.5px] text-gray-700">
                   <span>Round Off:</span>
                   <span className="font-mono">{Number(invoice.round_off) > 0 ? `+₹${invoice.round_off}` : `-₹${Math.abs(invoice.round_off)}`}</span>
                 </div>
@@ -345,17 +382,17 @@ export function ThermalReceipt({ invoice, onClose, onPrint, onSwitchToA4 }) {
               {/* Grand Total */}
               <div className="flex justify-between text-xs font-black pt-1.5 border-t-2 border-black">
                 <span>NET AMOUNT:</span>
-                <span className="text-sm font-black">₹{Number(invoice.grand_total || 0).toFixed(2)}</span>
+                <span className={`${is58 ? 'text-xs' : 'text-sm'} font-black`}>₹{Number(invoice.grand_total || 0).toFixed(2)}</span>
               </div>
 
               {/* Tender / Paid */}
-              <div className="flex justify-between text-[10px] font-semibold text-gray-800 pt-0.5">
+              <div className="flex justify-between text-[9.5px] font-semibold text-gray-800 pt-0.5">
                 <span>Paid ({invoice.payment_mode || 'CASH'}):</span>
                 <span className="font-mono font-bold">₹{Number(invoice.amount_paid || invoice.grand_total || 0).toFixed(2)}</span>
               </div>
 
               {Number(invoice.balance_due) > 0 && (
-                <div className="flex justify-between text-[10px] font-black text-rose-800 border-t border-dashed border-rose-300 pt-0.5">
+                <div className="flex justify-between text-[9.5px] font-black text-rose-800 border-t border-dashed border-rose-300 pt-0.5">
                   <span>Balance Due (Udhar):</span>
                   <span className="font-mono">₹{Number(invoice.balance_due).toFixed(2)}</span>
                 </div>
@@ -365,7 +402,7 @@ export function ThermalReceipt({ invoice, onClose, onPrint, onSwitchToA4 }) {
             {/* Savings Highlight Badge */}
             {totalSavings > 0 && (
               <div className="my-2 p-1.5 rounded bg-gray-100 text-center border border-gray-400">
-                <span className="text-[10px] font-black text-emerald-900">
+                <span className="text-[9px] font-black text-emerald-900">
                   🎉 YOU SAVED ₹{totalSavings.toFixed(2)} TODAY!
                 </span>
               </div>
@@ -373,24 +410,33 @@ export function ThermalReceipt({ invoice, onClose, onPrint, onSwitchToA4 }) {
 
             {/* Dynamic UPI QR Code */}
             {qrCodeUrl && (
-              <div className="my-2.5 text-center border-t border-dashed border-gray-600 pt-2">
-                <p className="text-[9px] font-bold uppercase tracking-wider mb-1">Scan to Pay via UPI</p>
-                <img src={qrCodeUrl} alt="UPI QR" className="w-24 h-24 mx-auto border border-gray-400 p-1 rounded object-contain" />
-                <p className="text-[8px] text-gray-600 mt-0.5">PhonePe • Google Pay • Paytm • BHIM</p>
+              <div className="my-2 text-center border-t border-dashed border-gray-600 pt-2">
+                <p className="text-[8.5px] font-bold uppercase tracking-wider mb-1">Scan to Pay via UPI</p>
+                <img 
+                  src={qrCodeUrl} 
+                  alt="UPI QR" 
+                  className={`${is58 ? 'w-20 h-20' : 'w-24 h-24'} mx-auto border border-gray-400 p-1 rounded object-contain`} 
+                />
+                <p className="text-[7.5px] text-gray-600 mt-0.5">PhonePe • GPay • Paytm • BHIM</p>
               </div>
             )}
 
             {/* Scannable Barcode */}
             <div className="my-2 text-center border-t border-dashed border-gray-600 pt-2">
               <div className="flex justify-center">
-                <BarcodeSvg value={invoice.invoice_number} height={24} barWidth={1.0} fontSize="text-[8px]" />
+                <BarcodeSvg 
+                  value={invoice.invoice_number} 
+                  height={is58 ? 18 : 24} 
+                  barWidth={is58 ? 0.8 : 1.0} 
+                  fontSize="text-[7.5px]" 
+                />
               </div>
             </div>
 
             {/* Footer Notes */}
-            <div className="text-center pt-2 border-t border-dashed border-gray-600 text-[9px] text-gray-700 leading-tight space-y-0.5">
+            <div className="text-center pt-2 border-t border-dashed border-gray-600 text-[8.5px] text-gray-700 leading-tight space-y-0.5">
               <p className="font-semibold">{invoice.thermal_footer_note || 'Thank you for shopping with us! Visit again.'}</p>
-              <p className="text-[8px] text-gray-500">KwikStore Pro • Universal POS & Retail Engine</p>
+              <p className="text-[7.5px] text-gray-500">KwikStore Pro • Universal POS & Retail Engine</p>
             </div>
           </div>
         </div>

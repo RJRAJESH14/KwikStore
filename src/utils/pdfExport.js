@@ -18,9 +18,9 @@ export async function exportElementToPdf(elementIdOrNode, filename = 'document.p
   }
 
   try {
-    // Ensure full dimensions are measured accurately
+    // Ensure full dimensions are measured accurately with generous bottom buffer
     const fullWidth = element.scrollWidth || element.offsetWidth || 794;
-    const fullHeight = element.scrollHeight || element.offsetHeight;
+    const fullHeight = (element.scrollHeight || element.offsetHeight) + 40;
 
     // Generate high-resolution canvas with white background
     const canvas = await html2canvas(element, {
@@ -48,6 +48,7 @@ export async function exportElementToPdf(elementIdOrNode, filename = 'document.p
           clonedEl.style.overflow = 'visible';
           clonedEl.style.transform = 'none';
           clonedEl.style.margin = '0';
+          clonedEl.style.paddingBottom = '36px';
         }
         
         // Remove overflow and height restrictions from all parents in the cloned DOM tree
@@ -80,6 +81,9 @@ export async function exportElementToPdf(elementIdOrNode, filename = 'document.p
     const printableHeight = (canvas.height * printableWidth) / canvas.width;
     const availableHeight = pageHeight - (margin * 2);
 
+    // Provide a 6mm safety margin so bottom footers/signatures never get sliced
+    const safeAvailableHeight = availableHeight - 6;
+
     // If fitToSinglePage is requested or content is within reasonable range (~1.3x), scale proportionally to fit 1 page
     const shouldFitSinglePage = options.fitToSinglePage !== undefined 
       ? options.fitToSinglePage 
@@ -87,7 +91,7 @@ export async function exportElementToPdf(elementIdOrNode, filename = 'document.p
 
     if (shouldFitSinglePage || printableHeight <= availableHeight) {
       // Proportional scale factor to fit all content (including bottom totals and signature) completely
-      const scaleFactor = Math.min(1, availableHeight / printableHeight, printableWidth / printableWidth);
+      const scaleFactor = Math.min(1, safeAvailableHeight / printableHeight, printableWidth / printableWidth);
       const finalWidth = printableWidth * scaleFactor;
       const finalHeight = printableHeight * scaleFactor;
       const xOffset = margin + (printableWidth - finalWidth) / 2;

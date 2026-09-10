@@ -256,7 +256,7 @@ export function A4TaxInvoice({ invoice, onClose, onPrint, onSwitchToThermal }) {
         }`}>
           <div 
             id="printable-a4-invoice" 
-            className="w-[794px] bg-white text-slate-900 p-5 rounded-xl shadow-2xl text-xs font-sans border border-slate-300 space-y-3 print:p-0 print:border-none print:shadow-none"
+            className="w-[794px] bg-white text-slate-900 p-5 pb-6 rounded-xl shadow-2xl text-xs font-sans border border-slate-300 space-y-3 print:p-0 print:border-none print:shadow-none"
           >
             
             {/* Top Header Badge & Company Details */}

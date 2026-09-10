@@ -25,6 +25,17 @@ export async function exportElementToPdf(elementIdOrNode, filename = 'document.p
       allowTaint: true,
       logging: false,
       backgroundColor: '#ffffff',
+      windowWidth: 1200,
+      onclone: (clonedDoc) => {
+        const id = typeof elementIdOrNode === 'string' ? elementIdOrNode : element?.id;
+        if (id) {
+          const clonedEl = clonedDoc.getElementById(id);
+          if (clonedEl) {
+            clonedEl.style.backgroundColor = '#ffffff';
+            clonedEl.style.color = '#0f172a';
+          }
+        }
+      },
       ...options.canvasOptions
     });
 

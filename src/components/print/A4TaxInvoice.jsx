@@ -255,7 +255,7 @@ export function A4TaxInvoice({ invoice, onClose, onPrint, onSwitchToThermal }) {
         }`}>
           <div 
             id="printable-a4-invoice" 
-            className="w-[820px] bg-white text-slate-900 p-8 rounded-xl shadow-2xl text-xs font-sans border border-slate-300 space-y-4 print:p-0 print:border-none print:shadow-none"
+            className="w-[794px] bg-white text-slate-900 p-6 rounded-xl shadow-2xl text-xs font-sans border border-slate-300 space-y-3.5 print:p-0 print:border-none print:shadow-none"
           >
             
             {/* Top Header Badge & Company Details */}
@@ -468,7 +468,7 @@ export function A4TaxInvoice({ invoice, onClose, onPrint, onSwitchToThermal }) {
                 <div className="bg-slate-100 px-3 py-1.5 text-[10px] font-black text-slate-800 border-b border-slate-300 uppercase tracking-wider">
                   HSN/SAC Tax Breakdown Summary
                 </div>
-                <table className="w-full text-[10px] border-collapse">
+                <table className="w-full text-[10px] border-collapse hsn-matrix">
                   <thead>
                     <tr className="bg-slate-50 text-slate-800 font-bold border-b border-slate-200">
                       <th className="py-1.5 px-2 text-left text-slate-800 font-bold">HSN/SAC</th>

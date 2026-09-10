@@ -291,8 +291,8 @@ html.dark ::-webkit-scrollbar-thumb:hover {
    Enhances clarity, line separation, and readability in both modes
    ============================================================ */
 
-/* High-contrast table headers */
-thead th,
+/* High-contrast table headers for application data tables */
+table:not(#printable-a4-invoice table):not(#printable-thermal-receipt table):not(.printable-table) thead th,
 .table-header-cell {
   font-size: 0.725rem !important;
   font-weight: 800 !important;
@@ -302,27 +302,27 @@ thead th,
   vertical-align: middle !important;
 }
 
-html:not(.dark) thead th,
-html.light thead th {
+html:not(.dark) table:not(#printable-a4-invoice table):not(#printable-thermal-receipt table):not(.printable-table) thead th,
+html.light table:not(#printable-a4-invoice table):not(#printable-thermal-receipt table):not(.printable-table) thead th {
   background-color: #f8fafc !important;
   color: #1e293b !important;
   border-bottom: 2px solid #cbd5e1 !important;
   border-right: 1px solid #cbd5e1 !important;
 }
 
-html.dark thead th {
+html.dark table:not(#printable-a4-invoice table):not(#printable-thermal-receipt table):not(.printable-table) thead th {
   background-color: #090d16 !important;
   color: #cbd5e1 !important;
   border-bottom: 2px solid #334155 !important;
   border-right: 1px solid #1e293b !important;
 }
 
-thead th:last-child {
+table:not(#printable-a4-invoice table):not(#printable-thermal-receipt table):not(.printable-table) thead th:last-child {
   border-right: none !important;
 }
 
 /* Distinct, breathable table cells with Excel-style vertical column gridlines */
-tbody td,
+table:not(#printable-a4-invoice table):not(#printable-thermal-receipt table):not(.printable-table) tbody td,
 .table-data-cell {
   padding: 0.85rem 1rem !important;
   vertical-align: middle !important;
@@ -330,20 +330,20 @@ tbody td,
   line-height: 1.4 !important;
 }
 
-html:not(.dark) tbody td,
-html.light tbody td {
+html:not(.dark) table:not(#printable-a4-invoice table):not(#printable-thermal-receipt table):not(.printable-table) tbody td,
+html.light table:not(#printable-a4-invoice table):not(#printable-thermal-receipt table):not(.printable-table) tbody td {
   color: #0f172a !important;
   border-bottom: 1px solid #e2e8f0 !important;
   border-right: 1px solid #e2e8f0 !important;
 }
 
-html.dark tbody td {
+html.dark table:not(#printable-a4-invoice table):not(#printable-thermal-receipt table):not(.printable-table) tbody td {
   color: #f1f5f9 !important;
   border-bottom: 1px solid #1e293b !important;
   border-right: 1px solid #1e293b !important;
 }
 
-tbody td:last-child {
+table:not(#printable-a4-invoice table):not(#printable-thermal-receipt table):not(.printable-table) tbody td:last-child {
   border-right: none !important;
 }
 
@@ -522,6 +522,53 @@ html.dark #printable-thermal-receipt .text-slate-500,
 html.dark #printable-salary-slip .text-slate-500,
 html.dark .printable-document .text-slate-500 {
   color: #64748b !important;
+}
+
+/* Explicit Table & Item Grid Rules for Printable Documents */
+#printable-a4-invoice table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+}
+
+#printable-a4-invoice table thead tr th {
+  background-color: #0f172a !important;
+  color: #ffffff !important;
+  padding: 6px 8px !important;
+  font-size: 10.5px !important;
+  line-height: 1.25 !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.025em !important;
+  border: 1px solid #0f172a !important;
+}
+
+#printable-a4-invoice table tbody tr td {
+  padding: 5px 8px !important;
+  font-size: 11px !important;
+  line-height: 1.35 !important;
+  color: #0f172a !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+#printable-a4-invoice table tbody tr:last-child td {
+  border-bottom: none !important;
+}
+
+#printable-a4-invoice table.hsn-matrix thead tr th {
+  background-color: #f1f5f9 !important;
+  color: #334155 !important;
+  padding: 4px 6px !important;
+  font-size: 9.5px !important;
+  font-weight: 700 !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
+#printable-a4-invoice table.hsn-matrix tbody tr td {
+  padding: 3px 6px !important;
+  font-size: 9.5px !important;
+  font-weight: 600 !important;
+  color: #0f172a !important;
+  border: 1px solid #e2e8f0 !important;
 }
 
 /* Dedicated Print Styles for 80mm Thermal & A4 Tax Invoices, Payroll, Statements & Reports */

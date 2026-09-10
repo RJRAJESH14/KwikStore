@@ -30,7 +30,10 @@ import {
   FileSpreadsheet,
   Receipt,
   ArrowUpDown,
-  ExternalLink
+  ExternalLink,
+  ChevronLeft,
+  ChevronsLeft,
+  ChevronsRight
 } from "lucide-react";
 import { A4TaxInvoice } from "../print/A4TaxInvoice";
 import { ThermalReceipt } from "../print/ThermalReceipt";
@@ -75,6 +78,15 @@ export function InvoiceDataView() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+
+  // Reset page to 1 when filters or view mode change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, datePreset, startDate, endDate, paymentMode, paymentStatus, invoiceType, selectedCustomerFilter, viewMode]);
 
   useEffect(() => {
     if (toastMessage) {
@@ -677,6 +689,18 @@ export function InvoiceDataView() {
     applyDatePreset("THIS_MONTH");
   };
 
+  // Pagination Calculations
+  const totalRecords = viewMode === "INVOICES" ? invoices.length : customerWiseData.length;
+  const numPageSize = pageSize === "ALL" ? totalRecords || 1 : Number(pageSize);
+  const totalPages = Math.max(1, Math.ceil(totalRecords / numPageSize));
+  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+
+  const startIndex = (safeCurrentPage - 1) * (pageSize === "ALL" ? totalRecords : numPageSize);
+  const endIndex = pageSize === "ALL" ? totalRecords : Math.min(startIndex + numPageSize, totalRecords);
+
+  const paginatedInvoices = pageSize === "ALL" ? invoices : invoices.slice(startIndex, endIndex);
+  const paginatedCustomerWise = pageSize === "ALL" ? customerWiseData : customerWiseData.slice(startIndex, endIndex);
+
   return (
     <div className={"h-full flex flex-col overflow-hidden font-sans " + (isDark ? "bg-slate-950 text-slate-100" : "bg-slate-50 text-slate-900")}>
       {toastMessage && (
@@ -1177,7 +1201,7 @@ export function InvoiceDataView() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60 font-medium">
-                    {invoices.map((inv) => {
+                    {paginatedInvoices.map((inv) => {
                       const totalGst = (inv.cgst_amount || 0) + (inv.sgst_amount || 0) + (inv.igst_amount || 0);
 
                       return (
@@ -1375,7 +1399,7 @@ export function InvoiceDataView() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {customerWiseData.map((cust, idx) => (
+              {paginatedCustomerWise.map((cust, idx) => (
                 <div
                   key={idx}
                   className={"p-5 rounded-2xl border transition-all flex flex-col justify-between " + (
@@ -1446,6 +1470,128 @@ export function InvoiceDataView() {
           )
         )}
       </div>
+
+      {/* Page Navigation Footer */}
+      {!loading && totalRecords > 0 && (
+        <div className={`px-6 py-3 border-t flex flex-wrap items-center justify-between gap-4 shrink-0 select-none ${
+          isDark ? 'bg-slate-900/95 border-slate-800 text-slate-300' : 'bg-white border-slate-200 text-slate-700 shadow-sm'
+        }`}>
+          {/* Left: Records summary & Page size selector */}
+          <div className="flex items-center space-x-4">
+            <div className="text-xs">
+              Showing <span className="font-mono font-bold text-slate-900 dark:text-white">{totalRecords > 0 ? startIndex + 1 : 0}</span> to <span className="font-mono font-bold text-slate-900 dark:text-white">{endIndex}</span> of <span className="font-mono font-bold text-brand-600 dark:text-brand-400">{totalRecords}</span> {viewMode === "INVOICES" ? "Invoices" : "Customers"}
+            </div>
+
+            <div className="flex items-center space-x-1.5 text-xs">
+              <span className="text-slate-500 font-medium">Rows per page:</span>
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(e.target.value === "ALL" ? "ALL" : Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className={`px-2 py-1 rounded-lg border text-xs font-bold outline-none cursor-pointer ${
+                  isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-100 border-slate-300 text-slate-800 shadow-sm'
+                }`}
+              >
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+                <option value="ALL">All ({totalRecords})</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Right: Pagination Controls */}
+          {pageSize !== "ALL" && totalPages > 1 && (
+            <div className="flex items-center space-x-1.5">
+              {/* First Page */}
+              <button
+                onClick={() => setCurrentPage(1)}
+                disabled={safeCurrentPage === 1}
+                className={`p-1.5 rounded-lg border transition-all ${
+                  safeCurrentPage === 1
+                    ? 'opacity-40 cursor-not-allowed border-transparent text-slate-400'
+                    : isDark ? 'hover:bg-slate-800 border-slate-700 text-slate-200' : 'hover:bg-slate-100 border-slate-300 text-slate-700 shadow-sm'
+                }`}
+                title="First Page"
+              >
+                <ChevronsLeft className="w-4 h-4" />
+              </button>
+
+              {/* Previous Page */}
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={safeCurrentPage === 1}
+                className={`px-2.5 py-1 rounded-lg border text-xs font-bold flex items-center space-x-1 transition-all ${
+                  safeCurrentPage === 1
+                    ? 'opacity-40 cursor-not-allowed border-transparent text-slate-400'
+                    : isDark ? 'hover:bg-slate-800 border-slate-700 text-slate-200' : 'hover:bg-slate-100 border-slate-300 text-slate-700 shadow-sm'
+                }`}
+                title="Previous Page"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+                <span>Prev</span>
+              </button>
+
+              {/* Page Number Buttons */}
+              <div className="flex items-center space-x-1 px-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter(p => p === 1 || p === totalPages || Math.abs(p - safeCurrentPage) <= 1)
+                  .map((p, idx, arr) => {
+                    const prevP = arr[idx - 1];
+                    const isEllipsis = prevP && p - prevP > 1;
+                    return (
+                      <React.Fragment key={p}>
+                        {isEllipsis && <span className="px-1 text-slate-400 font-mono text-xs">...</span>}
+                        <button
+                          onClick={() => setCurrentPage(p)}
+                          className={`min-w-[28px] h-7 px-2 rounded-lg text-xs font-bold font-mono transition-all ${
+                            safeCurrentPage === p
+                              ? 'bg-brand-600 text-white shadow-md shadow-brand-500/20'
+                              : isDark ? 'hover:bg-slate-800 text-slate-300' : 'hover:bg-slate-200 text-slate-700'
+                          }`}
+                        >
+                          {p}
+                        </button>
+                      </React.Fragment>
+                    );
+                  })}
+              </div>
+
+              {/* Next Page */}
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={safeCurrentPage === totalPages}
+                className={`px-2.5 py-1 rounded-lg border text-xs font-bold flex items-center space-x-1 transition-all ${
+                  safeCurrentPage === totalPages
+                    ? 'opacity-40 cursor-not-allowed border-transparent text-slate-400'
+                    : isDark ? 'hover:bg-slate-800 border-slate-700 text-slate-200' : 'hover:bg-slate-100 border-slate-300 text-slate-700 shadow-sm'
+                }`}
+                title="Next Page"
+              >
+                <span>Next</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+
+              {/* Last Page */}
+              <button
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={safeCurrentPage === totalPages}
+                className={`p-1.5 rounded-lg border transition-all ${
+                  safeCurrentPage === totalPages
+                    ? 'opacity-40 cursor-not-allowed border-transparent text-slate-400'
+                    : isDark ? 'hover:bg-slate-800 border-slate-700 text-slate-200' : 'hover:bg-slate-100 border-slate-300 text-slate-700 shadow-sm'
+                }`}
+                title="Last Page"
+              >
+                <ChevronsRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* FULL INVOICE PREVIEW MODAL */}
       {previewInvoice && previewFormat === "A4" && (

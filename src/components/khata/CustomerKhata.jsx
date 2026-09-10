@@ -731,31 +731,40 @@ export function CustomerKhata() {
         <div className={`flex-1 min-w-0 flex flex-col overflow-hidden ${isDark ? 'bg-slate-950' : 'bg-slate-50'}`}>
           {selectedCust ? (
             <div className="h-full flex flex-col overflow-hidden">
-              {/* Customer Profile Banner & Quick Actions */}
-              <div className={`p-4 border-b flex flex-wrap justify-between items-center gap-3 shrink-0 ${
+              {/* Customer Profile Banner & Quick Actions (Fixed Height & Stable Action Bar) */}
+              <div className={`px-4 py-3 border-b flex items-center justify-between gap-4 shrink-0 ${
                 isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
               }`}>
-                <div>
-                  <div className="flex items-center space-x-2.5">
-                    <h2 className={`text-base font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{selectedCust.name}</h2>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/30">
+                {/* Left: Customer Info (Fixed 2-line layout with clean truncation) */}
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="flex items-center space-x-2 min-w-0">
+                    <h2 className={`text-base font-bold truncate ${isDark ? 'text-white' : 'text-slate-900'}`} title={selectedCust.name}>
+                      {selectedCust.name}
+                    </h2>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/30 shrink-0">
                       {selectedCust.customer_type || 'RETAIL'}
                     </span>
                     {selectedCust.route_beat && (
-                      <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-semibold">
+                      <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-semibold shrink-0 max-w-[200px] truncate" title={selectedCust.route_beat}>
                         {selectedCust.route_beat}
                       </span>
                     )}
                   </div>
-                  <div className="text-xs text-slate-400 mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono">
-                    <span>Mobile: <strong className={isDark ? 'text-slate-200' : 'text-slate-800'}>{selectedCust.phone || 'N/A'}</strong></span>
-                    <span>•</span>
-                    <span>GSTIN: <strong className="text-cyan-600 dark:text-cyan-400">{selectedCust.gstin || 'Unregistered'}</strong></span>
-                    {selectedCust.address && <span>• <span>{selectedCust.address}</span></span>}
+                  <div className="text-xs text-slate-400 flex items-center gap-x-2 font-mono overflow-hidden whitespace-nowrap">
+                    <span className="shrink-0">Mobile: <strong className={isDark ? 'text-slate-200' : 'text-slate-800'}>{selectedCust.phone || 'N/A'}</strong></span>
+                    <span className="shrink-0">•</span>
+                    <span className="shrink-0">GSTIN: <strong className="text-cyan-600 dark:text-cyan-400">{selectedCust.gstin || 'Unregistered'}</strong></span>
+                    {selectedCust.address && (
+                      <>
+                        <span className="shrink-0">•</span>
+                        <span className="truncate max-w-[280px]" title={selectedCust.address}>{selectedCust.address}</span>
+                      </>
+                    )}
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2">
+                {/* Right: Fixed Action Buttons (Always pinned right in steady row) */}
+                <div className="flex items-center gap-1.5 shrink-0">
                   {/* View Details Button */}
                   <button
                     onClick={() => handleOpenViewModal(selectedCust)}

@@ -1,0 +1,39 @@
+{
+  "appId": "com.fleetbillpro.kwikstore",
+  "productName": "KwikStore Pro",
+  "electronVersion": "22.3.27",
+  "directories": {
+    "output": "dist-electron"
+  },
+  "files": [
+    "dist/**/*",
+    "server/**/*",
+    "electron/**/*",
+    "data/kwikstore.db",
+    "data/db-location.json",
+    "package.json"
+  ],
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": ["x64", "ia32"]
+      },
+      {
+        "target": "portable",
+        "arch": ["x64", "ia32"]
+      }
+    ],
+    "icon": "build/icon.ico",
+    "artifactName": "${productName}-Win7-8-Setup-${version}-${arch}.${ext}"
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "shortcutName": "KwikStore Pro"
+  },
+  "portable": {
+    "artifactName": "${productName}-Win7-8-Portable-${version}-${arch}.${ext}"
+  }
+}

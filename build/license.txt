@@ -1,0 +1,83 @@
+================================================================================
+                       KWIKSTORE PRO - END USER LICENSE AGREEMENT
+                       & TERMS AND CONDITIONS OF USE
+================================================================================
+Version 1.2.0 | Last Updated: 2026
+
+PLEASE READ THIS END USER LICENSE AGREEMENT ("AGREEMENT") CAREFULLY BEFORE 
+INSTALLING OR USING KWIKSTORE PRO ("SOFTWARE"). BY CLICKING "I AGREE", 
+INSTALLING, COPYING, OR USING THIS SOFTWARE, YOU AGREE TO BE BOUND BY THE 
+TERMS AND CONDITIONS SET FORTH BELOW.
+
+IF YOU DO NOT AGREE TO THESE TERMS, CLICK "CANCEL" TO ABORT INSTALLATION.
+
+--------------------------------------------------------------------------------
+1. GRANT OF LICENSE
+--------------------------------------------------------------------------------
+Subject to the terms and conditions of this Agreement, KwikStore Pro grants you
+a non-exclusive, non-transferable, revocable license to install and operate the 
+Software on compatible computers or point-of-sale (POS) hardware devices for your
+legitimate business operations.
+
+--------------------------------------------------------------------------------
+2. DATA OWNERSHIP, PRIVACY & 100% LOCAL OFFLINE STORAGE
+--------------------------------------------------------------------------------
+2.1. Complete Data Sovereignty: All store transactions, sales invoices, customer
+     khata ledgers, inventory counts, employee attendance, payroll records, and
+     tax details created within KwikStore Pro are stored locally on your device's
+     storage in encrypted or local SQLite database formats.
+2.2. Zero Data Harvesting: KwikStore Pro does not upload, harvest, monetize, or
+     transmit your private business sales data to third-party advertising networks.
+2.3. User Backup Responsibility: Because your data resides strictly on your local
+     hardware, you are solely responsible for maintaining regular automated or
+     manual backups (via the built-in Database & Backup Hub) to external storage
+     or local network drives to prevent data loss in the event of hardware failure.
+
+--------------------------------------------------------------------------------
+3. USER OBLIGATIONS & ACCEPTABLE USE
+--------------------------------------------------------------------------------
+You agree that you will:
+- Use the Software strictly in compliance with applicable local, state, and
+  national tax regulations, GST/VAT billing guidelines, and financial laws.
+- Maintain the confidentiality of your administrator credentials and staff RBAC
+  permissions configured within the system.
+- Not reverse engineer, decompile, disassemble, or derive source code from the
+  compiled executable distribution for illicit commercial reselling.
+
+--------------------------------------------------------------------------------
+4. HARDWARE COMPATIBILITY & SYSTEM INTEGRATION
+--------------------------------------------------------------------------------
+KwikStore Pro is engineered to interface with standard USB, Serial, Bluetooth,
+and Network hardware, including ESC/POS thermal receipt printers (56mm, 58mm, 
+80mm), standard laser/inkjet A4 printers, barcode scanners, and secondary 
+Customer-Facing Displays (CFD). Compatibility with third-party peripheral hardware
+depends on proper manufacturer driver installation on your host operating system.
+
+--------------------------------------------------------------------------------
+5. UPDATES & PRODUCT LIFECYCLE
+--------------------------------------------------------------------------------
+KwikStore Pro may periodically release software improvements, performance patches,
+and new feature releases. Updates can be installed seamlessly without affecting your
+existing local database and configuration files.
+
+--------------------------------------------------------------------------------
+6. DISCLAIMER OF WARRANTY & LIMITATION OF LIABILITY
+--------------------------------------------------------------------------------
+THE SOFTWARE IS PROVIDED "AS IS" AND "AS AVAILABLE", WITHOUT WARRANTIES OF ANY
+KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, OR NON-INFRINGEMENT. IN NO EVENT SHALL THE
+DEVELOPERS OR DISTRIBUTORS OF KWIKSTORE PRO BE LIABLE FOR ANY INDIRECT, INCIDENTAL,
+SPECIAL, PUNITIVE, OR CONSEQUENTIAL DAMAGES (INCLUDING LOSS OF PROFITS, DATA, OR
+BUSINESS INTERRUPTION) ARISING FROM THE USE OR INABILITY TO USE THE SOFTWARE.
+
+--------------------------------------------------------------------------------
+7. TERMINATION & GOVERNING LAW
+--------------------------------------------------------------------------------
+This Agreement remains effective until terminated. You may terminate it at any time
+by uninstalling all copies of the Software. KwikStore Pro reserves the right to
+terminate this license if you fail to comply with any material term of this Agreement.
+
+--------------------------------------------------------------------------------
+BY CONTINUING WITH THE INSTALLATION, YOU ACKNOWLEDGE THAT YOU HAVE READ,
+UNDERSTOOD, AND AGREE TO BE BOUND BY ALL THE TERMS AND CONDITIONS ABOVE.
+================================================================================

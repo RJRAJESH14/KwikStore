@@ -15,7 +15,7 @@
     "electron:build:win": "npm run build && electron-builder --win --config electron-builder.win10.json",
     "electron:build:win10": "npm run build && electron-builder --win --config electron-builder.win10.json",
     "electron:build:win7": "npm run build && electron-builder --win --config electron-builder.win7.json",
-    "electron:build:win:all": "npm run electron:build:win7 && npm run electron:build:win10",
+    "electron:build:win:all": "node scripts/build-all-windows.js",
     "electron:build:mac": "npm run build && electron-builder --mac --arm64 --x64 --universal",
     "electron:build:mac:intel": "npm run build && electron-builder --mac --x64",
     "electron:build:mac:arm": "npm run build && electron-builder --mac --arm64",

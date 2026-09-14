@@ -31,7 +31,15 @@
     "oneClick": false,
     "allowToChangeInstallationDirectory": true,
     "createDesktopShortcut": true,
-    "shortcutName": "KwikStore Pro"
+    "createStartMenuShortcut": true,
+    "shortcutName": "KwikStore Pro",
+    "license": "build/license.txt",
+    "installerSidebar": "build/installerSidebar.bmp",
+    "uninstallerSidebar": "build/uninstallerSidebar.bmp",
+    "installerHeader": "build/installerHeader.bmp",
+    "installerIcon": "build/icon.ico",
+    "uninstallerIcon": "build/icon.ico",
+    "installerHeaderIcon": "build/icon.ico"
   },
   "portable": {
     "artifactName": "${productName}-Win7-8-Portable-${version}-${arch}.${ext}"

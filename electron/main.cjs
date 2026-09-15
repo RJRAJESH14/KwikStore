@@ -1,6 +1,9 @@
 const { app, BrowserWindow, Menu, shell, dialog, ipcMain, screen } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
+const { pathToFileURL } = require('url');
+
 let autoUpdater = null;
 try {
   autoUpdater = require('electron-updater').autoUpdater;
@@ -10,12 +13,30 @@ try {
   console.log('electron-updater not available:', e.message);
 }
 
+// Windows 7 / 8 / 8.1 (NT kernel 6.1, 6.2, 6.3) GPU & crash prevention
+if (process.platform === 'win32') {
+  const release = os.release(); // e.g. "6.1.7601"
+  if (release.startsWith('6.1') || release.startsWith('6.2') || release.startsWith('6.3')) {
+    console.log('[Windows 7/8 Compatibility] Applying GPU safety flags to prevent blank screen crashes.');
+    app.disableHardwareAcceleration();
+    app.commandLine.appendSwitch('disable-gpu');
+    app.commandLine.appendSwitch('disable-software-rasterizer');
+    app.commandLine.appendSwitch('disable-gpu-compositing');
+    app.commandLine.appendSwitch('disable-d3d11');
+    app.commandLine.appendSwitch('no-sandbox');
+  }
+}
+
 // Handle EADDRINUSE or background server port conflicts silently
 process.on('uncaughtException', (err) => {
   if (err.code === 'EADDRINUSE') {
     console.log('[Notice] Port already in use. Attaching to existing running server instance.');
   } else {
     console.error('Electron main process uncaught exception:', err);
+    try {
+      const logFile = path.join(app.getPath('userData'), 'kwikstore-error.log');
+      fs.appendFileSync(logFile, `[${new Date().toISOString()}] Uncaught Exception:\n${err.stack || err}\n\n`);
+    } catch (e) {}
   }
 });
 
@@ -44,6 +65,7 @@ function openCfdWindow(customUrl) {
     minWidth: 800,
     minHeight: 600,
     title: 'KwikStore Pro - Customer Facing Display (CFD)',
+    backgroundColor: '#0f172a',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -55,7 +77,6 @@ function openCfdWindow(customUrl) {
   };
 
   if (secondaryDisplay) {
-    // Position on secondary customer-facing monitor automatically
     windowOptions.x = secondaryDisplay.bounds.x + 40;
     windowOptions.y = secondaryDisplay.bounds.y + 40;
   }
@@ -73,7 +94,7 @@ function openCfdWindow(customUrl) {
 }
 
 async function startBackendServer() {
-  if (serverStarted) return;
+  if (serverStarted) return true;
   try {
     const userDataDir = isDev 
       ? path.join(__dirname, '..', 'data')
@@ -90,6 +111,7 @@ async function startBackendServer() {
     if (!fs.existsSync(destDb)) {
       const candidateDbs = [
         path.join(__dirname, '..', 'data', 'kwikstore.db'),
+        path.join(process.resourcesPath || '', 'app.asar.unpacked', 'data', 'kwikstore.db'),
         path.join(__dirname, '..', 'server', 'data', 'kwikstore.db')
       ];
       for (const srcDb of candidateDbs) {
@@ -103,13 +125,58 @@ async function startBackendServer() {
       }
     }
 
-    console.log('Starting KwikStore Pro in-process backend server...');
-    await import('../server/server.js');
+    // Locate physical server.js (handles ASAR unpacked extraction)
+    let serverPath = path.join(__dirname, '..', 'server', 'server.js');
+    if (!fs.existsSync(serverPath)) {
+      const unpackedCandidate = serverPath.replace('app.asar', 'app.asar.unpacked');
+      if (fs.existsSync(unpackedCandidate)) {
+        serverPath = unpackedCandidate;
+      }
+    }
+
+    console.log('Starting KwikStore Pro in-process backend server from:', serverPath);
+    
+    // Windows file:// URL conversion is required for Node ESM dynamic import on Windows
+    const serverUrl = pathToFileURL(serverPath).href;
+    await import(serverUrl);
     serverStarted = true;
     console.log(`KwikStore Pro backend server active on http://localhost:${SERVER_PORT}`);
+    return true;
   } catch (err) {
     console.error('Failed to start KwikStore backend server:', err);
+    try {
+      const logFile = path.join(app.getPath('userData'), 'kwikstore-startup-error.log');
+      fs.writeFileSync(logFile, `Startup error at ${new Date().toISOString()}:\n${err.stack || err}\n`, 'utf8');
+    } catch (e) {}
+    return false;
   }
+}
+
+function loadApp(retries = 20) {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+
+  if (isDev) {
+    mainWindow.loadURL('http://localhost:5173');
+    mainWindow.webContents.openDevTools({ mode: 'detach' });
+    return;
+  }
+
+  const targetUrl = `http://localhost:${SERVER_PORT}`;
+  mainWindow.loadURL(targetUrl).catch((err) => {
+    console.warn(`[Attempt ${21 - retries}] Waiting for backend server on ${targetUrl}...`, err.message);
+    if (retries > 0) {
+      setTimeout(() => loadApp(retries - 1), 500);
+    } else {
+      console.error('Backend server connection timed out. Loading local dist fallback...');
+      let distIndex = path.join(__dirname, '..', 'dist', 'index.html');
+      if (!fs.existsSync(distIndex)) {
+        distIndex = distIndex.replace('app.asar', 'app.asar.unpacked');
+      }
+      if (fs.existsSync(distIndex)) {
+        mainWindow.loadFile(distIndex);
+      }
+    }
+  });
 }
 
 function createWindow() {
@@ -118,6 +185,8 @@ function createWindow() {
     height: 850,
     minWidth: 1024,
     minHeight: 700,
+    show: false,
+    backgroundColor: '#0f172a',
     title: 'KwikStore Pro - Universal Indian Retail & Billing POS',
     webPreferences: {
       nodeIntegration: false,
@@ -129,12 +198,18 @@ function createWindow() {
       : path.join(__dirname, '..', 'build', 'icon.png')
   });
 
-  if (isDev) {
-    mainWindow.loadURL('http://localhost:5173');
-    mainWindow.webContents.openDevTools({ mode: 'detach' });
-  } else {
-    mainWindow.loadURL(`http://localhost:${SERVER_PORT}`);
-  }
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.show();
+  });
+
+  // Fallback to ensure window shows even if ready-to-show takes long
+  setTimeout(() => {
+    if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
+      mainWindow.show();
+    }
+  }, 1500);
+
+  loadApp();
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (url.includes('customer-display') || url.includes('/cfd')) {
@@ -174,7 +249,16 @@ function createApplicationMenu() {
         { role: 'zoomIn' },
         { role: 'zoomOut' },
         { type: 'separator' },
-        { role: 'togglefullscreen', label: 'Full Screen POS Mode' }
+        { role: 'togglefullscreen', label: 'Full Screen POS Mode' },
+        {
+          label: 'Toggle Developer Tools',
+          accelerator: 'F12',
+          click: () => {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.toggleDevTools();
+            }
+          }
+        }
       ]
     },
     {
@@ -199,7 +283,7 @@ function createApplicationMenu() {
             dialog.showMessageBox({
               type: 'info',
               title: 'About KwikStore Pro',
-              message: 'KwikStore Pro POS v1.1.0',
+              message: 'KwikStore Pro POS v1.2.0',
               detail: 'Universal Indian Billing POS + Multi-Shop + HRMS Desktop Application\n\nHelpline & WhatsApp: +91 8338833377\nOfficial Portal: https://fleetbillpro.in\nFleetBillPro Enterprise Cloud Channel'
             });
           }

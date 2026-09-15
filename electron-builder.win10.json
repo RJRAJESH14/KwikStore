@@ -13,6 +13,13 @@
     "data/db-location.json",
     "package.json"
   ],
+  "asar": true,
+  "asarUnpack": [
+    "dist/**/*",
+    "server/**/*",
+    "data/**/*",
+    "node_modules/better-sqlite3/**/*"
+  ],
   "win": {
     "target": [
       {

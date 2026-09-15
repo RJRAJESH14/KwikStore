@@ -21,7 +21,11 @@ app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 
 // Serve static frontend from dist
-const distPath = path.join(__dirname, '../dist');
+let distPath = path.join(__dirname, '../dist');
+if (!fs.existsSync(distPath) && distPath.includes('app.asar.unpacked')) {
+  const asarDist = distPath.replace('app.asar.unpacked', 'app.asar');
+  if (fs.existsSync(asarDist)) distPath = asarDist;
+}
 if (fs.existsSync(distPath)) {
   app.use(express.static(distPath));
 }
